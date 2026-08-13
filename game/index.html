@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AETHER RAZE</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect fill='%23050a12' width='64' height='64'/><path fill='%233cf0ff' d='M8 32 L40 20 L56 32 L40 44 Z'/></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="boot">
+    <div>AETHER RAZE</div>
+    <div class="bar"><i id="bootbar"></i></div>
+    <div>INICIALIZANDO SISTEMAS DE COMBATE</div>
+  </div>
+  <div id="wrap">
+    <canvas id="game" width="1920" height="1080"></canvas>
+  </div>
+  <script src="js/core.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/gfx.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/bosses.js"></script>
+  <script src="js/stages.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    (function () {
+      var bar = document.getElementById("bootbar");
+      var booted = false;
+      function go() {
+        if (booted) return;
+        booted = true;
+        AR.boot();
+      }
+      var t0 = performance.now();
+      function tick(now) {
+        var p = Math.min(1, (now - t0) / 400);
+        if (bar) bar.style.width = (p * 100) + "%";
+        if (p < 1) requestAnimationFrame(tick);
+        else go();
+      }
+      requestAnimationFrame(tick);
+      setTimeout(go, 1000);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "aether-raze",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AETHER RAZE — horizontal arcade shmup for PC",
+  "scripts": {
+    "start": "python3 play.py",
+    "test": "node tools/test.js",
+    "play": "python3 play.py"
+  }
+}
