@@ -3,6 +3,9 @@ AR.Gfx = {
   sprites: {},
   art: {},
   bg: {},
+  sky: {},
+  mid: {},
+  fg: {},
   bossArt: [],
   bloom: null,
   bloom2: null,
@@ -40,7 +43,25 @@ AR.Gfx = {
       ["red", "assets/bg-red.jpg", "bg"],
       ["neon", "assets/bg-neon.jpg", "bg"],
       ["bio", "assets/bg-bio.jpg", "bg"],
-      ["core", "assets/bg-core.jpg", "bg"]
+      ["core", "assets/bg-core.jpg", "bg"],
+      ["steel", "assets/sky-steel.jpg", "sky"],
+      ["ocean", "assets/sky-ocean.jpg", "sky"],
+      ["red", "assets/sky-red.jpg", "sky"],
+      ["neon", "assets/sky-neon.jpg", "sky"],
+      ["bio", "assets/sky-bio.jpg", "sky"],
+      ["core", "assets/sky-core.jpg", "sky"],
+      ["steel", "assets/mid-steel.webp", "mid"],
+      ["ocean", "assets/mid-ocean.webp", "mid"],
+      ["red", "assets/mid-red.webp", "mid"],
+      ["neon", "assets/mid-neon.webp", "mid"],
+      ["bio", "assets/mid-bio.webp", "mid"],
+      ["core", "assets/mid-core.webp", "mid"],
+      ["steel", "assets/fg-steel.webp", "fg"],
+      ["ocean", "assets/fg-ocean.webp", "fg"],
+      ["red", "assets/fg-red.webp", "fg"],
+      ["neon", "assets/fg-neon.webp", "fg"],
+      ["bio", "assets/fg-bio.webp", "fg"],
+      ["core", "assets/fg-core.webp", "fg"]
     ];
     var bosses = [
       "assets/boss-krast.png", "assets/boss-myrion.png", "assets/boss-skarath.png",
@@ -58,6 +79,9 @@ AR.Gfx = {
       im.src = f[1];
       if (f[2] === "art") self.art[f[0]] = im;
       else if (f[2] === "bg") self.bg[f[0]] = im;
+      else if (f[2] === "sky") self.sky[f[0]] = im;
+      else if (f[2] === "mid") self.mid[f[0]] = im;
+      else if (f[2] === "fg") self.fg[f[0]] = im;
       else self[f[0]] = im;
     });
     this.bossArt = bosses.map(function (src) {
@@ -400,15 +424,35 @@ AR.Background = {
       });
     }
   },
-  draw: function (ctx, stage, speed) {
-    var keys = ["steel", "ocean", "red", "neon", "bio", "core"];
-    var img = AR.Gfx.bg[keys[stage] || "steel"];
-    if (AR.Gfx._imgOk(img)) this.painted(ctx, img, this.cam, this.t, stage);
-    else {
+  keyOf: function (stage) {
+    return ["steel", "ocean", "red", "neon", "bio", "core"][stage] || "steel";
+  },
+  draw: function (ctx, stage) {
+    this.drawBack(ctx, stage);
+    this.drawFront(ctx, stage);
+  },
+  drawBack: function (ctx, stage) {
+    var key = this.keyOf(stage);
+    var sky = AR.Gfx.sky[key];
+    var mid = AR.Gfx.mid[key];
+    ctx.fillStyle = "#02040a";
+    ctx.fillRect(0, 0, AR.W, AR.H);
+    if (AR.Gfx._imgOk(sky)) {
+      this.pan(ctx, sky, this.cam, 0.08, 0, AR.H, 1);
+    } else if (AR.Gfx._imgOk(AR.Gfx.bg[key])) {
+      this.pan(ctx, AR.Gfx.bg[key], this.cam, 0.1, 0, AR.H, 1);
+    } else {
       var fn = [this.steel, this.ocean, this.red, this.neon, this.bio, this.core][stage] || this.steel;
-      fn.call(this, ctx, this.cam, this.t, speed);
+      fn.call(this, ctx, this.cam, this.t);
+      this.atmosphere(ctx, stage, this.t, this.cam);
+      return;
     }
+    if (AR.Gfx._imgOk(mid)) this.pan(ctx, mid, this.cam, 0.34, 0, AR.H, 1);
     this.atmosphere(ctx, stage, this.t, this.cam);
+  },
+  drawFront: function (ctx, stage) {
+    var fg = AR.Gfx.fg[this.keyOf(stage)];
+    if (AR.Gfx._imgOk(fg)) this.pan(ctx, fg, this.cam, 0.96, 0, AR.H, 1);
     for (var i = 0; i < this.debris.length; i++) {
       var d = this.debris[i];
       ctx.save();
@@ -421,31 +465,24 @@ AR.Background = {
     }
   },
   pan: function (ctx, img, cam, k, y, h, a) {
-    var w = AR.W * 1.08;
-    var period = w * 2;
+    if (!img || !img.naturalWidth) return;
+    var destH = h;
+    var destW = destH * (img.naturalWidth / img.naturalHeight);
+    if (destW < AR.W * 1.12) destW = AR.W * 1.12;
+    var period = destW * 2;
     var x = -((cam * k) % period);
     if (x > 0) x -= period;
     ctx.save();
     ctx.globalAlpha = a == null ? 1 : a;
-    while (x < AR.W + 8) {
-      ctx.drawImage(img, x, y, w + 1, h);
+    while (x < AR.W + destW) {
+      ctx.drawImage(img, x, y, destW + 0.5, destH);
       ctx.save();
-      ctx.translate(x + w * 2, 0);
+      ctx.translate(x + destW * 2, 0);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, y, w + 1, h);
+      ctx.drawImage(img, 0, y, destW + 0.5, destH);
       ctx.restore();
       x += period;
     }
-    ctx.restore();
-  },
-  painted: function (ctx, img, cam, t, stage) {
-    ctx.fillStyle = "#050308";
-    ctx.fillRect(0, 0, AR.W, AR.H);
-    this.pan(ctx, img, cam, 0.14, -120, 1240, 0.55);
-    this.pan(ctx, img, cam, 0.4, 0, AR.H, 1);
-    ctx.save();
-    ctx.globalAlpha = 0.42;
-    this.pan(ctx, img, cam, 0.78, 480, 680, 1);
     ctx.restore();
   },
   atmosphere: function (ctx, stage, t, cam) {

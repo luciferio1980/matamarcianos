@@ -430,7 +430,7 @@ AR.Game = {
     else if (st === "intro") AR.UI.intro(ctx, this.introT);
     else if (st === "name") AR.UI.nameEntry(ctx, this);
     else if (playing) {
-      AR.Background.draw(ctx, this.stage, this.scroll * this.scrollMul);
+      AR.Background.drawBack(ctx, this.stage);
       if (this.tunnel > 0) {
         ctx.fillStyle = "#050308";
         var wall = 90 + Math.sin(this.t * 8) * 20;
@@ -443,6 +443,7 @@ AR.Game = {
       AR.Combat.draw(ctx, this.t);
       if (this.boss && this.boss.alive) this.boss.draw(ctx);
       AR.Particles.draw(ctx);
+      AR.Background.drawFront(ctx, this.stage);
 
       if (AR.Save.data.options.bloom) {
         var b = AR.Gfx.bctx, b2 = AR.Gfx.bctx2;
