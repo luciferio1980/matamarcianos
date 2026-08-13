@@ -507,8 +507,19 @@ AR.Game = {
     }
 
     if (AR.Save.data.options.flash && AR.FX.flash > 0) {
-      ctx.fillStyle = "rgba(255,255,255," + AR.FX.flash * 0.55 + ")";
+      ctx.fillStyle = "rgba(" + (AR.FX.tintRgb || "255,255,255") + "," + AR.FX.flash * 0.72 + ")";
       ctx.fillRect(0, 0, AR.W, AR.H);
+    }
+    if (AR.FX.tint > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      var g = ctx.createRadialGradient(AR.W * 0.62, AR.H * 0.48, 20, AR.W * 0.5, AR.H * 0.5, 1100);
+      g.addColorStop(0, "rgba(" + AR.FX.tintRgb + "," + (AR.FX.tint * 0.72) + ")");
+      g.addColorStop(0.45, "rgba(" + AR.FX.tintRgb + "," + (AR.FX.tint * 0.22) + ")");
+      g.addColorStop(1, "rgba(" + AR.FX.tintRgb + ",0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, AR.W, AR.H);
+      ctx.restore();
     }
   }
 };

@@ -535,6 +535,9 @@ AR.Audio = {
       case "confirm": this.osc("square", 520, t, 0.06, 0.1, dest); this.osc("square", 780, t + 0.06, 0.08, 0.08, dest); break;
       case "warn": this.osc("square", 720, t, 0.12, 0.1, dest); this.osc("square", 720, t + 0.16, 0.12, 0.1, dest); break;
       case "boss": this.osc("sawtooth", 60, t, 0.8, 0.3, dest, 30); this.noise(t, 0.6, 0.25, 200, dest); break;
+      case "thunder": this.noise(t, 0.55, 0.5, 400, dest); this.osc("square", 90, t, 0.18, 0.22, dest, 40); this.osc("square", 1400, t, 0.08, 0.12, dest, 200); break;
+      case "flame": this.noise(t, 0.5, 0.4, 250, dest); this.osc("sawtooth", 110, t, 0.4, 0.2, dest, 40); break;
+      case "beam": this.osc("sawtooth", 220, t, 0.55, 0.22, dest, 80); this.osc("square", 880, t, 0.12, 0.1, dest, 200); this.noise(t, 0.2, 0.18, 1800, dest); break;
       case "text": this.osc("square", 1800, t, 0.02, 0.04, dest); break;
     }
   }

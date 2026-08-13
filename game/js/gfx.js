@@ -515,13 +515,19 @@ AR.Particles = {
 };
 
 AR.FX = {
-  shake: 0, flash: 0, hitstop: 0, vignette: 0.55,
+  shake: 0, flash: 0, hitstop: 0, vignette: 0.55, tint: 0, tintRgb: "255,255,255",
   boom: function (n) { this.shake = Math.max(this.shake, n || 8); },
-  white: function (n) { this.flash = Math.max(this.flash, n || 0.4); },
+  white: function (n) { this.flash = Math.max(this.flash, n || 0.4); this.tintRgb = "255,255,255"; },
+  color: function (rgb, n) {
+    this.flash = Math.max(this.flash, n || 0.45);
+    this.tint = Math.max(this.tint, n || 0.45);
+    this.tintRgb = rgb || "255,255,255";
+  },
   stop: function (n) { this.hitstop = Math.max(this.hitstop, n || 0.04); },
   update: function (dt) {
     this.shake = Math.max(0, this.shake - dt * 28);
     this.flash = Math.max(0, this.flash - dt * 2.2);
+    this.tint = Math.max(0, this.tint - dt * 1.6);
     this.hitstop = Math.max(0, this.hitstop - dt);
   }
 };

@@ -17,6 +17,9 @@ AR.Boss = function (id, g) {
   this.fire = 0;
   this.pat = 0;
   this.patT = 0;
+  this.special = null;
+  this.specCd = 1.6;
+  this.destT = 0;
   var hp = [780, 960, 1180, 1320, 1500, 2100][id] * g.diff.hp;
   this.hp = this.max = hp;
   this.name = AR.STAGES[id].boss;
@@ -228,16 +231,276 @@ AR.Boss.prototype.update = function (dt) {
     return;
   }
   this["ai" + this.id](dt);
+  this.tickSpecial(dt);
   var p = this.g.combat.player;
   if (!p.dead && p.inv <= 0 && AR.circleHit(p.x, p.y, 6, this.x, this.y, this.bodyR() * 0.55)) {
     this.g.combat.hurtPlayer(this.x, this.y);
   }
 };
 
+AR.Boss.prototype.roam = function (dt, xmin, xmax, ymin, ymax) {
+  xmin = xmin == null ? AR.W * 0.36 : xmin;
+  xmax = xmax == null ? AR.W - 150 : xmax;
+  ymin = ymin == null ? 150 : ymin;
+  ymax = ymax == null ? AR.H - 150 : ymax;
+  this.destT -= dt;
+  if (this.destT <= 0 || AR.len(this.x - this.tx, this.y - this.ty) < 28) {
+    var nx, ny, tries = 0;
+    do {
+      nx = AR.rand(xmin, xmax);
+      ny = AR.rand(ymin, ymax);
+      tries++;
+    } while (tries < 8 && AR.len(nx - this.x, ny - this.y) < 220);
+    this.tx = nx;
+    this.ty = ny;
+    this.destT = AR.rand(1.15, 2.5);
+  }
+  var sp = this.special ? 210 : 420;
+  var dx = this.tx - this.x, dy = this.ty - this.y;
+  var d = AR.len(dx, dy) || 1;
+  var step = Math.min(d, sp * dt);
+  this.x += dx / d * step;
+  this.y += dy / d * step;
+};
+
+AR.Boss.prototype.tickSpecial = function (dt) {
+  if (this.dying || this.intro > 0) return;
+  if (this.special) {
+    this.updateSpecial(dt);
+    return;
+  }
+  this.specCd -= dt;
+  if (this.specCd <= 0) {
+    var pool = [
+      ["fire"],
+      ["lightning"],
+      ["fire"],
+      ["laser"],
+      ["lightning"],
+      ["laser", "lightning", "fire"]
+    ][this.id] || ["fire"];
+    this.startSpecial(pool[(Math.random() * pool.length) | 0]);
+    this.specCd = this.phase >= 3 ? 2.8 : 4.0;
+  }
+};
+
+AR.Boss.prototype.startSpecial = function (kind) {
+  var p = this.g.combat.player;
+  var s = { kind: kind, t: 0, wind: 0.55, dur: 1.35, hit: 0 };
+  if (kind === "fire") {
+    s.wind = 0.5; s.dur = 1.45;
+    s.ang = Math.atan2(p.y - this.y, p.x - this.x);
+    s.spread = 0.38; s.len = 780; s.vang = (p.y > this.y ? 1 : -1) * 0.85;
+    AR.FX.color("255,90,20", 0.35);
+    AR.Audio.sfx("warn", this.x);
+  } else if (kind === "lightning") {
+    s.wind = 0.42; s.dur = 1.05;
+    s.aims = [
+      { x: p.x, y: p.y },
+      { x: AR.rand(80, AR.W * 0.55), y: AR.rand(80, AR.H - 80) },
+      { x: AR.rand(80, AR.W * 0.55), y: AR.rand(80, AR.H - 80) },
+      { x: p.x, y: AR.clamp(p.y + AR.rand(-220, 220), 60, AR.H - 60) }
+    ];
+    AR.FX.color("180,220,255", 0.3);
+    AR.Audio.sfx("warn", this.x);
+  } else {
+    s.wind = 0.7; s.dur = 1.25;
+    s.beams = [
+      { y: p.y, vy: AR.rand(-40, 40) },
+      { y: AR.clamp(p.y + (p.y > 540 ? -240 : 240), 80, AR.H - 80), vy: AR.rand(-30, 30) }
+    ];
+    if (this.phase >= 3) s.beams.push({ y: AR.rand(120, AR.H - 120), vy: 0 });
+    s.w = 26 + this.phase * 4;
+    AR.FX.color("255,60,200", 0.32);
+    AR.Audio.sfx("charge", this.x);
+  }
+  this.special = s;
+  AR.FX.boom(10);
+};
+
+AR.Boss.prototype.updateSpecial = function (dt) {
+  var s = this.special, p = this.g.combat.player, c = this.g.combat;
+  if (!s) return;
+  var prev = s.t;
+  s.t += dt;
+  if (prev < s.wind && s.t >= s.wind) {
+    AR.FX.boom(22);
+    AR.FX.white(0.55);
+    AR.Input.rumble(220, 1);
+    if (s.kind === "fire") {
+      AR.FX.color("255,70,10", 0.85);
+      AR.Audio.sfx("flame", this.x);
+      AR.Particles.burst(this.x - 40, this.y, 40, "#ff6622", 380, 8);
+    } else if (s.kind === "lightning") {
+      AR.FX.color("210,240,255", 0.95);
+      AR.Audio.sfx("thunder", this.x);
+      AR.Particles.burst(this.x, this.y, 36, "#cceeff", 420, 5);
+    } else {
+      AR.FX.color("255,80,220", 0.8);
+      AR.Audio.sfx("beam", this.x);
+    }
+  }
+  if (s.t >= s.dur) { this.special = null; return; }
+  var live = s.t >= s.wind && !p.dead && p.inv <= 0;
+
+  if (s.kind === "fire") {
+    s.ang += s.vang * dt;
+    var ang = Math.atan2(p.y - this.y, p.x - this.x);
+    var dlt = ang - s.ang;
+    while (dlt > Math.PI) dlt -= 6.283;
+    while (dlt < -Math.PI) dlt += 6.283;
+    var dist = AR.len(p.x - this.x, p.y - this.y);
+    if (live && Math.abs(dlt) < s.spread && dist < s.len && dist > 30) c.hurtPlayer(p.x, p.y);
+    if (s.t >= s.wind && Math.random() < dt * 28) {
+      var fd = AR.rand(80, 560);
+      AR.Particles.spark(this.x + Math.cos(s.ang) * fd, this.y + Math.sin(s.ang) * fd, "#ffaa44");
+    }
+  } else if (s.kind === "lightning") {
+    if (s.t >= s.wind && (s.t * 10 | 0) !== (prev * 10 | 0)) AR.FX.color("200,230,255", 0.42);
+    if (live) {
+      for (var i = 0; i < s.aims.length; i++) {
+        var a = s.aims[i];
+        if (this.distSeg(p.x, p.y, this.x - 40, this.y, a.x, a.y) < 22) c.hurtPlayer(p.x, p.y);
+      }
+    }
+  } else {
+    for (var b = 0; b < s.beams.length; b++) {
+      s.beams[b].y += s.beams[b].vy * dt;
+      if (live && p.x < this.x + 40 && Math.abs(p.y - s.beams[b].y) < s.w * 0.55) c.hurtPlayer(p.x, p.y);
+    }
+  }
+};
+
+AR.Boss.prototype.distSeg = function (px, py, x0, y0, x1, y1) {
+  var dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy;
+  var t = l2 ? AR.clamp(((px - x0) * dx + (py - y0) * dy) / l2, 0, 1) : 0;
+  return AR.len(px - (x0 + t * dx), py - (y0 + t * dy));
+};
+
+AR.Boss.prototype.drawSpecial = function (ctx) {
+  var s = this.special;
+  if (!s) return;
+  var wind = s.t < s.wind;
+  var u = wind ? s.t / s.wind : 1;
+  var burst = wind ? 0 : Math.max(0, 1 - (s.t - s.wind) * 2.2);
+  ctx.save();
+  if (s.kind === "fire") {
+    var heat = ctx.createRadialGradient(this.x, this.y, 20, this.x, this.y, 980);
+    heat.addColorStop(0, wind ? "rgba(255,120,20," + (0.12 * u) + ")" : "rgba(255,90,10," + (0.22 + burst * 0.35) + ")");
+    heat.addColorStop(1, "rgba(255,40,0,0)");
+    ctx.fillStyle = heat;
+    ctx.fillRect(0, 0, AR.W, AR.H);
+    var len = (wind ? 220 * u : s.len);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.translate(this.x, this.y);
+    ctx.rotate(s.ang);
+    var grd = ctx.createLinearGradient(0, 0, len, 0);
+    grd.addColorStop(0, wind ? "rgba(255,180,40,0.35)" : "rgba(255,240,180,0.9)");
+    grd.addColorStop(0.35, wind ? "rgba(255,80,10,0.15)" : "rgba(255,90,10,0.65)");
+    grd.addColorStop(1, "rgba(255,40,0,0)");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(len, -len * s.spread);
+    ctx.lineTo(len, len * s.spread);
+    ctx.closePath();
+    ctx.fill();
+    if (!wind) {
+      for (var i = 0; i < 10; i++) {
+        ctx.fillStyle = i % 2 ? "rgba(255,200,60,0.45)" : "rgba(255,80,20,0.35)";
+        ctx.beginPath();
+        ctx.ellipse(80 + i * 70 + Math.random() * 20, (Math.random() - 0.5) * i * 28, 40 + i * 6, 18 + i * 3, 0, 0, 6.28);
+        ctx.fill();
+      }
+    }
+  } else if (s.kind === "lightning") {
+    ctx.fillStyle = "rgba(8,16,40," + (wind ? 0.28 * u : 0.18 + burst * 0.22) + ")";
+    ctx.fillRect(0, 0, AR.W, AR.H);
+    if (!wind && ((s.t * 18) & 1)) {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(210,235,255," + (0.18 + burst * 0.45) + ")";
+      ctx.fillRect(0, 0, AR.W, AR.H);
+    }
+    if (wind) {
+      ctx.strokeStyle = "rgba(180,220,255," + (0.25 + u * 0.4) + ")";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 12]);
+      for (var j = 0; j < s.aims.length; j++) {
+        ctx.beginPath(); ctx.moveTo(this.x - 40, this.y); ctx.lineTo(s.aims[j].x, s.aims[j].y); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    } else {
+      ctx.globalCompositeOperation = "lighter";
+      for (var k = 0; k < s.aims.length; k++) {
+        this.drawBolt(ctx, this.x - 40, this.y, s.aims[k].x, s.aims[k].y);
+      }
+    }
+  } else {
+    if (!wind) {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(255,40,200," + (0.1 + burst * 0.28) + ")";
+      ctx.fillRect(0, 0, AR.W, AR.H);
+    }
+    for (var n = 0; n < s.beams.length; n++) {
+      var by = s.beams[n].y, hw = s.w;
+      if (wind) {
+        ctx.strokeStyle = "rgba(255,80,220," + (0.25 + u * 0.5) + ")";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([14, 10]);
+        ctx.beginPath(); ctx.moveTo(0, by); ctx.lineTo(this.x, by); ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.globalCompositeOperation = "lighter";
+        var lg = ctx.createLinearGradient(0, by, this.x, by);
+        lg.addColorStop(0, "rgba(255,255,255,0)");
+        lg.addColorStop(0.2, "rgba(255,120,240,0.85)");
+        lg.addColorStop(1, "rgba(255,255,255,0.95)");
+        ctx.fillStyle = lg;
+        ctx.fillRect(0, by - hw * 0.5, this.x, hw);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, by - 4, this.x, 8);
+        AR.Gfx.glow(ctx, this.x - 20, by, 50, "rgba(255,80,220,0.9)", 0.8);
+        AR.Gfx.glow(ctx, 80, by, 90, "rgba(255,180,255,0.55)", 0.7);
+      }
+    }
+  }
+  ctx.restore();
+};
+
+AR.Boss.prototype.drawBolt = function (ctx, x0, y0, x1, y1) {
+  var segs = 10, i, u, x, y;
+  ctx.strokeStyle = "rgba(160,210,255,0.55)";
+  ctx.lineWidth = 10;
+  ctx.beginPath(); ctx.moveTo(x0, y0);
+  var pts = [[x0, y0]];
+  for (i = 1; i < segs; i++) {
+    u = i / segs;
+    x = x0 + (x1 - x0) * u + (Math.random() - 0.5) * 48;
+    y = y0 + (y1 - y0) * u + (Math.random() - 0.5) * 48;
+    pts.push([x, y]);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(x1, y1);
+  ctx.stroke();
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x0, y0);
+  for (i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.lineTo(x1, y1);
+  ctx.stroke();
+  var mid = pts[4] || pts[pts.length >> 1];
+  ctx.strokeStyle = "rgba(200,230,255,0.7)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(mid[0], mid[1]);
+  ctx.lineTo(mid[0] + (Math.random() - 0.5) * 160, mid[1] + (Math.random() - 0.5) * 140);
+  ctx.stroke();
+};
+
 AR.Boss.prototype.ai0 = function (dt) {
   var c = this.g.combat, p = c.player;
-  this.y = AR.H * 0.5 + Math.sin(this.t * 0.7) * 160;
-  this.x = AR.W - 340 + Math.sin(this.t * 0.3) * 30;
+  this.roam(dt, AR.W * 0.4, AR.W - 140, 160, AR.H - 160);
+  if (this.special) return;
   this.patT += dt;
   if (this.phase >= 2 && this.patT > 3.5) {
     this.patT = 0;
@@ -245,157 +508,104 @@ AR.Boss.prototype.ai0 = function (dt) {
     AR.FX.boom(10);
   }
   this.fire += dt;
-  var rate = this.phase === 1 ? 0.9 : this.phase === 2 ? 0.65 : 0.48;
+  var rate = this.phase === 1 ? 0.95 : this.phase === 2 ? 0.7 : 0.55;
   if (this.fire > rate) {
     this.fire = 0;
-    this.pat = (this.pat + 1) % 4;
-    if (this.pat === 0 && this.partAlive("cañón")) c.fanShot(this.x - 90, this.y, p.x, p.y, 5, 0.12, 320, "#ff6644");
-    else if (this.pat === 1 && this.partAlive("cañón")) {
-      for (var i = 0; i < 3; i++) c.eShot(this.x - 80, this.y - 80 + i * 80, -380, 0, 6, "#ffaa44");
-    } else if (this.pat === 2) c.aimedShot(this.x - 40, this.y, p.x, p.y, 420, 7, "#ff3366");
-    else c.ringShot(this.x - 20, this.y, this.phase === 3 ? 10 : 8, 210, "#ff8866", this.t);
-  }
-  if (this.phase === 3 && (this.t * 2 | 0) !== ((this.t - dt) * 2 | 0)) {
-    c.eShot(this.x - 100, this.y + Math.sin(this.t * 8) * 200, -500, 0, 5, "#fff0a0");
+    this.pat = (this.pat + 1) % 3;
+    if (this.pat === 0 && this.partAlive("cañón")) c.fanShot(this.x - 90, this.y, p.x, p.y, 4, 0.12, 300, "#ff6644");
+    else if (this.pat === 1) c.aimedShot(this.x - 40, this.y, p.x, p.y, 380, 7, "#ff3366");
+    else c.ringShot(this.x - 20, this.y, 7, 200, "#ff8866", this.t);
   }
 };
 
 AR.Boss.prototype.ai1 = function (dt) {
   var c = this.g.combat, p = c.player;
-  var ang = this.t * 0.55;
-  this.x = AR.W * 0.62 + Math.cos(ang) * 220;
-  this.y = AR.H * 0.5 + Math.sin(ang * 1.3) * 260;
-  if (this.phase >= 2) this.y = AR.clamp(AR.lerp(this.y, p.y, 0.4 * dt), 140, AR.H - 140);
+  this.roam(dt, AR.W * 0.32, AR.W - 160, 140, AR.H - 140);
+  if (this.special) return;
   this.fire += dt;
-  var rate = this.phase === 1 ? 0.85 : 0.55;
-  if (this.fire > rate) {
+  if (this.fire > (this.phase === 1 ? 0.9 : 0.6)) {
     this.fire = 0;
-    this.pat = (this.pat + 1) % 3;
-    if (this.pat === 0) c.ringShot(this.x, this.y, 9, 200, "#44e0ff", this.t);
-    else if (this.pat === 1) c.fanShot(this.x - 40, this.y, p.x, p.y, 4, 0.2, 280, "#66ffcc");
-    else {
-      for (var i = 0; i < 5; i++) c.eShot(this.x, this.y, -160 - i * 30, Math.sin(this.t + i) * 140, 6, "#88ffff");
-    }
-  }
-  if (this.phase === 3) {
-    var pull = AR.norm(this.x - p.x, this.y - p.y);
-    p.x += pull.x * 40 * dt; p.y += pull.y * 40 * dt;
-    if (this.fire > rate * 0.5) c.aimedShot(this.x, this.y, p.x, p.y, 360, 6, "#aaffee");
+    this.pat = (this.pat + 1) % 2;
+    if (this.pat === 0) c.ringShot(this.x, this.y, 8, 190, "#44e0ff", this.t);
+    else c.fanShot(this.x - 40, this.y, p.x, p.y, 4, 0.18, 260, "#66ffcc");
   }
 };
 
 AR.Boss.prototype.ai2 = function (dt) {
   var c = this.g.combat, p = c.player;
-  this.x = AR.W - 300;
-  this.y = AR.H * 0.5 + Math.sin(this.t * 0.5) * 200;
+  this.roam(dt, AR.W * 0.38, AR.W - 150, 130, AR.H - 130);
+  if (this.special) return;
   this.fire += dt;
-  if (this.fire > (this.phase === 1 ? 0.7 : 0.5)) {
+  if (this.fire > (this.phase === 1 ? 0.8 : 0.55)) {
     this.fire = 0;
-    this.pat = (this.pat + 1) % 4;
-    if (this.pat === 0) {
-      for (var i = 0; i < 6; i++) c.eShot(AR.W + 10, AR.rand(60, AR.H - 60), -AR.rand(180, 340), AR.rand(-40, 40), 8, "#ff8844");
-    } else if (this.pat === 1) c.fanShot(this.x - 50, this.y, p.x, p.y, 6, 0.1, 300, "#ff5522");
-    else if (this.pat === 2) c.ringShot(this.x, this.y, 12, 180, "#ffaa55", this.t);
-    else c.aimedShot(this.x, this.y - 80, p.x, p.y, 400, 8, "#fff0c0");
+    this.pat = (this.pat + 1) % 3;
+    if (this.pat === 0) c.fanShot(this.x - 50, this.y, p.x, p.y, 5, 0.1, 280, "#ff5522");
+    else if (this.pat === 1) c.ringShot(this.x, this.y, 10, 170, "#ffaa55", this.t);
+    else c.aimedShot(this.x, this.y - 80, p.x, p.y, 360, 8, "#fff0c0");
   }
-  if (this.phase >= 2 && Math.random() < dt * 1.2) {
+  if (this.phase >= 2 && Math.random() < dt * 0.6) {
     c.spawnEnemy("kami", { x: AR.W + 20, y: AR.rand(80, AR.H - 80) });
-  }
-  if (this.phase === 3 && (this.t * 3 | 0) !== ((this.t - dt) * 3 | 0)) {
-    c.eShot(this.x - 70, 80, -220, 80, 6, "#ff6644");
-    c.eShot(this.x - 70, AR.H - 80, -220, -80, 6, "#ff6644");
   }
 };
 
 AR.Boss.prototype.ai3 = function (dt) {
   var c = this.g.combat, p = c.player;
-  this.x = AR.W - 280 + Math.sin(this.t * 0.4) * 40;
-  this.y = AR.H * 0.5 + Math.sin(this.t * 0.9) * 90;
+  this.roam(dt, AR.W * 0.34, AR.W - 140, 150, AR.H - 150);
+  if (this.special) return;
   this.fire += dt;
-  if (this.fire > 0.42) {
+  if (this.fire > 0.55) {
     this.fire = 0;
-    this.pat = (this.pat + 1) % 5;
+    this.pat = (this.pat + 1) % 3;
     if (this.pat === 0) {
-      for (var i = 0; i < 8; i++) c.eShot(this.x - 120, 80 + i * 120, -420, 0, 5, "#ff3d8a");
-    } else if (this.pat === 1) {
-      if (this.partAlive("torreta")) c.fanShot(this.x - 80, this.y, p.x, p.y, 5, 0.16, 360, "#3cf0ff");
-      else c.ringShot(this.x, this.y, 8, 220, "#3cf0ff", this.t);
-    } else if (this.pat === 2) c.ringShot(this.x, this.y, 10, 240, "#ff3d8a", this.t);
-    else if (this.pat === 3) {
-      c.spawnEnemy("wasp", { x: this.x - 40, y: this.y - 40 });
-      c.spawnEnemy("wasp", { x: this.x - 40, y: this.y + 40 });
-    } else {
-      var y = ((this.t * 140) % (AR.H - 80)) + 40;
-      for (var j = 0; j < 10; j++) c.eShot(AR.W, y + j * 8 - 40, -500, 0, 4, "#fff");
-    }
-  }
-  if (this.phase === 3) {
-    var a = this.t * 2.2;
-    c.eShot(this.x, this.y, Math.cos(a) * 280, Math.sin(a) * 280, 5, "#c04cff");
+      if (this.partAlive("torreta")) c.fanShot(this.x - 80, this.y, p.x, p.y, 4, 0.16, 320, "#3cf0ff");
+      else c.ringShot(this.x, this.y, 8, 210, "#3cf0ff", this.t);
+    } else if (this.pat === 1) c.ringShot(this.x, this.y, 8, 220, "#ff3d8a", this.t);
+    else c.aimedShot(this.x - 40, this.y, p.x, p.y, 400, 6, "#fff");
   }
 };
 
 AR.Boss.prototype.ai4 = function (dt) {
   var c = this.g.combat, p = c.player;
-  this.x = AR.W - 320;
-  this.y = AR.H * 0.5 + Math.sin(this.t * 0.6) * 140;
+  this.roam(dt, AR.W * 0.4, AR.W - 160, 160, AR.H - 160);
   for (var i = 0; i < this.parts.length; i++) {
     if (this.parts[i].name === "tentáculo") {
       this.parts[i].ox = -120 + Math.sin(this.t * 1.7 + i) * 50;
       this.parts[i].oy = this.parts[i].oy * 0.99 + Math.sin(this.t + i * 2) * 8;
     }
   }
+  if (this.special) return;
   this.fire += dt;
-  if (this.fire > (this.phase === 1 ? 0.75 : 0.5)) {
+  if (this.fire > (this.phase === 1 ? 0.8 : 0.55)) {
     this.fire = 0;
-    this.pat = (this.pat + 1) % 4;
+    this.pat = (this.pat + 1) % 3;
     if (this.pat === 0) {
       for (var k = 0; k < this.parts.length; k++) {
         if (this.parts[k].alive && this.parts[k].name === "tentáculo") {
-          c.aimedShot(this.px(this.parts[k]), this.py(this.parts[k]), p.x, p.y, 300, 6, "#ff6688");
+          c.aimedShot(this.px(this.parts[k]), this.py(this.parts[k]), p.x, p.y, 280, 6, "#ff6688");
         }
       }
-    } else if (this.pat === 1) c.ringShot(this.x, this.y, 11, 190, "#88ff99", this.t);
-    else if (this.pat === 2) c.fanShot(this.x - 20, this.y, p.x, p.y, 6, 0.14, 260, "#ff8899");
-    else c.spawnEnemy("squid", { x: AR.W + 20, y: AR.rand(100, 900) });
-  }
-  if (this.phase === 3 && (this.t * 4 | 0) !== ((this.t - dt) * 4 | 0)) {
-    c.eShot(this.x, this.y, -220, Math.sin(this.t * 9) * 200, 7, "#ff4466");
+    } else if (this.pat === 1) c.ringShot(this.x, this.y, 9, 180, "#88ff99", this.t);
+    else c.fanShot(this.x - 20, this.y, p.x, p.y, 5, 0.14, 240, "#ff8899");
   }
 };
 
 AR.Boss.prototype.ai5 = function (dt) {
   var c = this.g.combat, p = c.player;
-  this.x = AR.W - 300 + Math.sin(this.t * 0.35) * 50;
-  this.y = AR.H * 0.5 + Math.sin(this.t * 0.8) * (this.phase >= 3 ? 220 : 120);
+  this.roam(dt, AR.W * 0.3, AR.W - 130, 120, AR.H - 120);
+  if (this.special) return;
   this.fire += dt;
-  var rate = [0.7, 0.55, 0.42, 0.34][this.phase - 1] || 0.4;
+  var rate = [0.75, 0.6, 0.48, 0.4][this.phase - 1] || 0.5;
   if (this.fire > rate) {
     this.fire = 0;
-    this.pat = (this.pat + 1) % 6;
-    if (this.pat === 0) c.ringShot(this.x, this.y, 14, 230, "#ff3355", this.t);
+    this.pat = (this.pat + 1) % 4;
+    if (this.pat === 0) c.ringShot(this.x, this.y, 12, 210, "#ff3355", this.t);
     else if (this.pat === 1) {
-      if (this.partAlive("cañón")) c.fanShot(this.x - 60, this.y, p.x, p.y, 7, 0.1, 340, "#ffaa33");
-      else c.ringShot(this.x, this.y, 10, 260, "#ffaa33", this.t);
-    } else if (this.pat === 2) {
-      for (var i = 0; i < 5; i++) c.aimedShot(this.x - 40, this.y - 80 + i * 40, p.x, p.y, 380, 6, "#fff");
-    } else if (this.pat === 3) {
-      c.spawnEnemy("armor", { x: AR.W + 30, y: 200 });
-      c.spawnEnemy("kami", { x: AR.W + 30, y: 800 });
-    } else if (this.pat === 4) {
-      for (var j = 0; j < 12; j++) {
-        var yy = 60 + j * 85;
-        c.eShot(AR.W, yy, -300 - (j % 2) * 80, 0, 5, j % 2 ? "#ff3355" : "#66ddff");
-      }
-    } else {
-      c.ringShot(this.x - 40, this.y - 100, 8, 200, "#c04cff", this.t);
-      c.ringShot(this.x - 40, this.y + 100, 8, 200, "#c04cff", -this.t);
+      if (this.partAlive("cañón")) c.fanShot(this.x - 60, this.y, p.x, p.y, 6, 0.1, 320, "#ffaa33");
+      else c.ringShot(this.x, this.y, 9, 240, "#ffaa33", this.t);
+    } else if (this.pat === 2) c.aimedShot(this.x - 40, this.y, p.x, p.y, 360, 6, "#fff");
+    else {
+      c.ringShot(this.x - 40, this.y - 80, 7, 190, "#c04cff", this.t);
     }
-  }
-  if (this.phase === 4) {
-    var a = this.t * 3.4;
-    c.eShot(this.x, this.y, Math.cos(a) * 320, Math.sin(a) * 320, 6, "#ffffff");
-    if (Math.random() < dt * 2) c.spawnEnemy("swarm", { x: AR.W + 10, y: AR.rand(80, 1000) });
   }
 };
 
@@ -460,6 +670,7 @@ AR.Boss.prototype.draw = function (ctx) {
     }
     ctx.restore();
   }
+  this.drawSpecial(ctx);
 };
 
 AR.Boss.prototype.drawChassis = function (ctx) {
