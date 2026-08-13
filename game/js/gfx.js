@@ -479,7 +479,7 @@ AR.Background = {
       ctx.save();
       ctx.translate(x + destW * 2, 0);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, y, destW + 0.5, destH);
+      ctx.drawImage(img, 0, y + 18, destW + 0.5, destH + 12);
       ctx.restore();
       x += period;
     }
