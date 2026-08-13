@@ -15,7 +15,6 @@ AR.Game = {
   boss: null,
   scroll: 140,
   scrollMul: 1,
-  tunnel: 0,
   noDeath: true,
   kills: 0,
   deaths: 0,
@@ -103,9 +102,6 @@ AR.Game = {
     this.clock = 0;
     this.ei = 0;
     this.scrollMul = 1;
-    this.tunnel = 0;
-    this.tunnelGap = 330;
-    this.tunnelSway = 80;
     this.noDeath = true;
     this.kills = 0;
     this.events = AR.Stages.build(this.stage, this.diff.extra);
@@ -118,52 +114,6 @@ AR.Game = {
     this.introT = 0;
     var keys = ["steel", "ocean", "red", "neon", "bio", "core"];
     AR.Audio.play(keys[this.stage]);
-  },
-
-  tunnelShape: function () {
-    if (this.tunnel <= 0) return null;
-    var gap = this.tunnelGap || 330;
-    var sway = this.tunnelSway || 80;
-    var mid = AR.H * 0.5 + Math.sin(this.t * 0.85 + AR.Background.cam * 0.004) * sway;
-    var top = AR.clamp(mid - gap * 0.5, 50, 420);
-    var bot = AR.clamp(AR.H - (mid + gap * 0.5), 50, 420);
-    return { top: top, bot: bot };
-  },
-  drawTunnel: function (ctx) {
-    var sh = this.tunnelShape();
-    if (!sh) return;
-    var cam = AR.Background.cam;
-    var t = this.t;
-    ctx.fillStyle = "#0a0610";
-    ctx.fillRect(0, 0, AR.W, sh.top);
-    ctx.fillRect(0, AR.H - sh.bot, AR.W, sh.bot);
-    var span = 52;
-    var off = -((cam * 1.55) % span);
-    for (var x = off; x < AR.W + span; x += span) {
-      ctx.fillStyle = "#161018";
-      ctx.fillRect(x, 0, 14, sh.top);
-      ctx.fillRect(x, AR.H - sh.bot, 14, sh.bot);
-      ctx.fillStyle = "#2a2030";
-      ctx.fillRect(x + 3, 0, 4, sh.top);
-      ctx.fillRect(x + 3, AR.H - sh.bot, 4, sh.bot);
-      ctx.fillStyle = "rgba(255,80,140," + (0.18 + Math.sin(t * 8 + x * 0.02) * 0.12) + ")";
-      ctx.beginPath();
-      ctx.moveTo(x + 6, sh.top);
-      ctx.lineTo(x + 18, sh.top - 16);
-      ctx.lineTo(x - 6, sh.top - 16);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(x + 6, AR.H - sh.bot);
-      ctx.lineTo(x + 18, AR.H - sh.bot + 16);
-      ctx.lineTo(x - 6, AR.H - sh.bot + 16);
-      ctx.fill();
-    }
-    ctx.fillStyle = "rgba(255,70,140,0.35)";
-    ctx.fillRect(0, sh.top - 8, AR.W, 8);
-    ctx.fillRect(0, AR.H - sh.bot, AR.W, 8);
-    ctx.fillStyle = "rgba(255,180,80,0.15)";
-    ctx.fillRect(0, sh.top - 3, AR.W, 3);
-    ctx.fillRect(0, AR.H - sh.bot, AR.W, 3);
   },
 
   startBoss: function () {
@@ -386,12 +336,6 @@ AR.Game = {
     this.runTime += dt;
     this.clock += dt;
     this.fade = Math.max(0, this.fade - dt * 1.5);
-    if (this.tunnel > 0) {
-      this.tunnel = Math.max(0, this.tunnel - dt);
-      var sh = this.tunnelShape();
-      var pl = AR.Combat.player;
-      if (sh && !pl.dead && (pl.y < sh.top + 12 || pl.y > AR.H - sh.bot - 12)) AR.Combat.hurtPlayer(pl.x, pl.y);
-    }
 
     var speed = this.scroll * this.scrollMul * (1 + this.stage * 0.06);
     AR.Background.update(dt, speed);
@@ -515,7 +459,6 @@ AR.Game = {
     else if (st === "name") AR.UI.nameEntry(ctx, this);
     else if (playing) {
       AR.Background.drawBack(ctx, this.stage);
-      if (this.tunnel > 0) this.drawTunnel(ctx);
       AR.Combat.draw(ctx, this.t);
       if (this.boss && this.boss.alive) this.boss.draw(ctx);
       AR.Particles.draw(ctx);
@@ -531,9 +474,9 @@ AR.Game = {
           b2.drawImage(AR.Gfx.bloom, 0, 0, 320, 180);
           ctx.save();
           ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = 0.22;
+          ctx.globalAlpha = 0.38;
           ctx.drawImage(AR.Gfx.bloom2, -18, -18, AR.W + 36, AR.H + 36);
-          ctx.globalAlpha = 0.1;
+          ctx.globalAlpha = 0.18;
           ctx.drawImage(AR.Gfx.bloom, -8, -8, AR.W + 16, AR.H + 16);
           ctx.restore();
         }
@@ -546,7 +489,7 @@ AR.Game = {
 
       var vg = ctx.createRadialGradient(960, 540, 280, 960, 540, 820);
       vg.addColorStop(0, "rgba(0,0,0,0)");
-      vg.addColorStop(1, "rgba(0,0,0,0.22)");
+      vg.addColorStop(1, "rgba(0,0,0,0.45)");
       ctx.fillStyle = vg;
       ctx.fillRect(0, 0, AR.W, AR.H);
 

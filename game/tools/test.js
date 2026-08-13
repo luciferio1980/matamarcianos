@@ -83,25 +83,22 @@ ok("six stages with bosses", () => {
     const last = ev[ev.length - 1];
     assert.ok(last.t >= 100, "stage " + i + " ends too soon: " + last.t);
     let started = false;
-    let sawTunnel = false;
-    let sawGate = false;
     last.fn({ startBoss() { started = true; }, toast() {}, combat: { spawnEnemy() {} }, scrollMul: 1 });
     assert.ok(started, "stage " + i + " does not start boss");
+    const kinds = [];
     const g = {
       toast() {},
       scrollMul: 1,
+      stage: i,
       combat: {
-        spawnEnemy(kind) { if (kind === "gate") sawGate = true; }
+        spawnEnemy(kind) { kinds.push(kind); return { trail: [], alive: true }; }
       },
       startBoss() {}
     };
-    Object.defineProperty(g, "tunnel", {
-      set(v) { if (v > 0) sawTunnel = true; this._tun = v; },
-      get() { return this._tun || 0; }
-    });
     ev.forEach((e) => e.fn(g));
-    assert.ok(sawTunnel, "stage " + i + " has no tunnel");
-    assert.ok(sawGate, "stage " + i + " has no gate obstacles");
+    assert.ok(kinds.indexOf("hazard") >= 0, "stage " + i + " has no scenery hazard");
+    assert.ok(kinds.indexOf("coil") >= 0, "stage " + i + " has no coil snake");
+    assert.ok(kinds.indexOf("gate") < 0, "stage " + i + " still has gates");
   }
 });
 ok("difficulty curve", () => {

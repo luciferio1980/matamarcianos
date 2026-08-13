@@ -324,21 +324,16 @@ AR.Gfx = {
   },
 
   drawEnemy: function (ctx, e, t) {
-    if (e.kind === "gate" || e.solid) {
-      ctx.save();
-      var x0 = e.x - e.w / 2, y0 = e.y - e.h / 2;
-      ctx.fillStyle = "#1c161c";
-      ctx.fillRect(x0, y0, e.w, e.h);
-      ctx.fillStyle = "#3a3238";
-      ctx.fillRect(x0 + 8, y0, 10, e.h);
-      ctx.fillStyle = "#2a2228";
-      for (var gy = 0; gy < e.h; gy += 28) ctx.fillRect(x0 + 4, y0 + gy, e.w - 8, 4);
-      ctx.fillStyle = "rgba(255,70,140,0.45)";
-      ctx.fillRect(x0, y0, e.w, 8);
-      ctx.fillRect(x0, y0 + e.h - 8, e.w, 8);
-      ctx.fillStyle = "rgba(255,180,80," + (0.25 + Math.sin(t * 10 + e.y) * 0.2) + ")";
-      ctx.fillRect(x0 + e.w * 0.35, y0 + 12, 10, e.h - 24);
-      ctx.restore();
+    if (e.kind === "hazard" || e.kind === "gate" || e.solid) {
+      this.drawHazard(ctx, e, t);
+      return;
+    }
+    if (e.kind === "coil" || e.kind === "coilseg") {
+      this.drawCoil(ctx, e, t);
+      return;
+    }
+    if (e.kind === "walker") {
+      this.drawWalker(ctx, e, t);
       return;
     }
     var img = this.art[e.spr];
@@ -348,6 +343,102 @@ AR.Gfx = {
     this.glow(ctx, e.x + 10, e.y, 18, "rgba(255,80,60,0.35)", 0.35);
     this.drawArt(ctx, img, this.sprites[e.spr] || this.sprites.wasp, e.x, e.y, dw, dh, e.rot || 0, e.flash, e.scale || 1);
     if (e.kind === "pop") this.glow(ctx, e.x, e.y, 22, "rgba(255,180,80,0.5)", 0.3);
+  },
+  drawHazard: function (ctx, e, t) {
+    var th = e.theme != null ? e.theme : 0;
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.rotate(Math.sin(t * 1.2 + e.y) * 0.04);
+    var hw = e.w * 0.5, hh = e.h * 0.5;
+    if (th === 0) {
+      ctx.fillStyle = "#3a3530";
+      ctx.fillRect(-hw, -hh, e.w, e.h);
+      ctx.fillStyle = "#6a6054";
+      ctx.fillRect(-hw + 6, -hh, 8, e.h);
+      ctx.fillStyle = "#c45a20";
+      for (var i = 0; i < 4; i++) ctx.fillRect(-hw + 4, -hh + 16 + i * 36, e.w - 8, 5);
+    } else if (th === 1) {
+      ctx.fillStyle = "#0a3a44";
+      ctx.beginPath(); ctx.ellipse(0, 0, hw, hh, 0, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = "rgba(80,220,200,0.55)";
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(0, 0, hw * 0.6, hh * 0.6, t, 0, 6.28); ctx.stroke();
+      ctx.fillStyle = "rgba(40,255,220,0.35)";
+      ctx.beginPath(); ctx.arc(-6, -4, 8, 0, 6.28); ctx.fill();
+    } else if (th === 2) {
+      ctx.fillStyle = "#5a3828";
+      ctx.beginPath();
+      ctx.moveTo(-hw, hh * 0.4); ctx.lineTo(-hw * 0.3, -hh); ctx.lineTo(hw * 0.5, -hh * 0.5);
+      ctx.lineTo(hw, hh * 0.2); ctx.lineTo(0, hh); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#8a5840";
+      ctx.fillRect(-8, -10, 18, 22);
+    } else if (th === 3) {
+      ctx.fillStyle = "#1a1024";
+      ctx.fillRect(-hw * 0.25, -hh, hw * 0.5, e.h);
+      ctx.fillStyle = "rgba(255,40,180," + (0.4 + Math.sin(t * 8) * 0.25) + ")";
+      ctx.fillRect(-hw, -hh + 10, e.w, 28);
+      ctx.fillStyle = "rgba(60,240,255,0.5)";
+      ctx.fillRect(-hw + 4, -hh + 42, e.w - 8, 8);
+    } else if (th === 4) {
+      ctx.fillStyle = "#4a2028";
+      ctx.beginPath(); ctx.ellipse(0, 0, hw, hh, 0.2, 0, 6.28); ctx.fill();
+      var beat = 0.5 + Math.sin(t * 5) * 0.5;
+      ctx.fillStyle = "rgba(255,50,80," + (0.3 + beat * 0.4) + ")";
+      ctx.beginPath(); ctx.ellipse(4, 2, hw * 0.35 + beat * 4, hh * 0.3, 0, 0, 6.28); ctx.fill();
+    } else {
+      ctx.fillStyle = "#201018";
+      ctx.beginPath();
+      ctx.moveTo(0, -hh); ctx.lineTo(hw, hh); ctx.lineTo(-hw, hh); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(255,60,80," + (0.35 + Math.sin(t * 7) * 0.25) + ")";
+      ctx.beginPath(); ctx.moveTo(0, -hh * 0.5); ctx.lineTo(hw * 0.45, hh * 0.5); ctx.lineTo(-hw * 0.45, hh * 0.5); ctx.fill();
+    }
+    ctx.restore();
+  },
+  drawCoil: function (ctx, e) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.rotate(e.rot || 0);
+    var head = e.kind === "coil";
+    this.glow(ctx, 0, 0, head ? 22 : 14, "rgba(40,255,200,0.45)", 0.4);
+    ctx.fillStyle = head ? "#1a3a38" : "#16302e";
+    ctx.beginPath(); ctx.ellipse(0, 0, head ? 20 : 13, head ? 11 : 8, 0, 0, 6.28); ctx.fill();
+    ctx.strokeStyle = "#7aeee0";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 0, head ? 16 : 10, head ? 8 : 6, 0, 0, 6.28); ctx.stroke();
+    ctx.fillStyle = "#2a5048";
+    ctx.fillRect(-8, -6, 6, 12);
+    if (head) {
+      ctx.fillStyle = "#c8fff4";
+      ctx.beginPath(); ctx.arc(10, -3, 4, 0, 6.28); ctx.fill();
+      ctx.fillStyle = "#ff4466";
+      ctx.beginPath(); ctx.arc(11, -3, 2, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = "#8affdc";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(14, -6); ctx.lineTo(26, -10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(14, 4); ctx.lineTo(24, 8); ctx.stroke();
+    }
+    ctx.restore();
+  },
+  drawWalker: function (ctx, e, t) {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    ctx.rotate(e.rot || 0);
+    ctx.fillStyle = "#3a322c";
+    ctx.fillRect(-22, -10, 44, 20);
+    ctx.fillStyle = "#6a5a48";
+    ctx.fillRect(-16, -6, 20, 12);
+    ctx.fillStyle = "#ff8844";
+    ctx.fillRect(8, -4, 12, 8);
+    ctx.strokeStyle = "#8a7a68";
+    ctx.lineWidth = 3;
+    for (var i = 0; i < 4; i++) {
+      var a = (i < 2 ? -1 : 1) * (0.7 + Math.sin(t * 8 + i) * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(-10 + (i % 2) * 16, 8);
+      ctx.lineTo(-10 + (i % 2) * 16 + Math.cos(a) * 16, 8 + Math.sin(a) * 18);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 };
 
@@ -481,16 +572,13 @@ AR.Background = {
     }
     if (AR.Gfx._imgOk(mid)) {
       this.pan(ctx, mid, this.cam, 0.34, 0, AR.H, 1);
-      this.pan(ctx, mid, this.cam, 0.34, 0, AR.H, 0.45);
+      this.pan(ctx, mid, this.cam, 0.34, 0, AR.H, 0.55);
     }
     this.atmosphere(ctx, stage, this.t, this.cam);
   },
   drawFront: function (ctx, stage) {
     var fg = AR.Gfx.fg[this.keyOf(stage)];
-    if (AR.Gfx._imgOk(fg)) {
-      this.pan(ctx, fg, this.cam, 0.96, 0, AR.H, 1);
-      this.pan(ctx, fg, this.cam, 0.96, 0, AR.H, 0.4);
-    }
+    if (AR.Gfx._imgOk(fg)) this.pan(ctx, fg, this.cam, 0.96, 0, AR.H, 1);
     for (var i = 0; i < this.debris.length; i++) {
       var d = this.debris[i];
       ctx.save();
@@ -525,13 +613,13 @@ AR.Background = {
   },
   atmosphere: function (ctx, stage, t, cam) {
     var shafts = [
-      ["rgba(255,140,50,0.018)", 0.35],
-      ["rgba(40,180,255,0.02)", 0.2],
-      ["rgba(255,90,40,0.02)", 0.4],
-      ["rgba(255,40,180,0.018)", 0.25],
-      ["rgba(255,50,70,0.02)", 0.15],
-      ["rgba(255,40,60,0.025)", 0.45]
-    ][stage] || ["rgba(255,140,50,0.018)", 0.3];
+      ["rgba(255,140,50,0.07)", 0.35],
+      ["rgba(40,180,255,0.08)", 0.2],
+      ["rgba(255,90,40,0.08)", 0.4],
+      ["rgba(255,40,180,0.07)", 0.25],
+      ["rgba(255,50,70,0.08)", 0.15],
+      ["rgba(255,40,60,0.1)", 0.45]
+    ][stage] || ["rgba(255,140,50,0.07)", 0.3];
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (var i = 0; i < 7; i++) {
@@ -547,13 +635,13 @@ AR.Background = {
     }
     ctx.restore();
     var g = ctx.createLinearGradient(0, 0, 0, AR.H);
-    g.addColorStop(0, "rgba(0,0,0,0.06)");
+    g.addColorStop(0, "rgba(0,0,0,0.28)");
     g.addColorStop(0.45, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(0,0,0,0.08)");
+    g.addColorStop(1, "rgba(0,0,0,0.38)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, AR.W, AR.H);
-    ctx.fillStyle = "rgba(220,200,160,0.2)";
-    for (var d = 0; d < 16; d++) {
+    ctx.fillStyle = "rgba(220,200,160,0.35)";
+    for (var d = 0; d < 28; d++) {
       var dx = (d * 211 - cam * (0.5 + (d % 3) * 0.3)) % AR.W;
       if (dx < 0) dx += AR.W;
       var dy = (d * 137 + Math.sin(t * 0.7 + d) * 30) % AR.H;

@@ -5,7 +5,7 @@ AR.Combat = {
     this.pBullets = new AR.Pool(420, function () { return AR.Combat._b(); });
     this.eBullets = new AR.Pool(520, function () { return AR.Combat._b(); });
     this.missiles = new AR.Pool(48, function () { return AR.Combat._b(); });
-    this.enemies = new AR.Pool(80, function () { return AR.Combat._e(); });
+    this.enemies = new AR.Pool(140, function () { return AR.Combat._e(); });
     this.pickups = new AR.Pool(24, function () { return AR.Combat._u(); });
     this.player = this._player();
   },
@@ -58,6 +58,7 @@ AR.Combat = {
     opt = opt || {};
     var def = AR.Combat.KINDS[kind] || AR.Combat.KINDS.wasp;
     var diff = this.g.diff;
+    var stage = this.g.stage || 0;
     return this.enemies.spawn(function (e) {
       e.kind = kind;
       e.spr = def.spr;
@@ -75,9 +76,12 @@ AR.Combat = {
       e.rate = (def.rate || 1.4) / diff.rate;
       e.extra = opt;
       e.solid = !!def.solid;
+      e.theme = opt.theme != null ? opt.theme : stage;
+      e.trail = null;
       if (opt.h) e.h = opt.h;
       if (opt.w) e.w = opt.w;
-      if (e.solid) e.r = Math.max(e.w, e.h) * 0.45;
+      if (opt.vx != null) e.vx = opt.vx;
+      if (e.solid) e.r = Math.min(e.w, e.h) * 0.42;
     });
   },
   spawnPickup: function (x, y, kind) {
@@ -517,7 +521,10 @@ AR.Combat.KINDS = {
   mine:   { spr: "mine", hp: 4, r: 14, w: 28, h: 28, vx: -100, score: 80, ai: "mine", drop: 0.04, shot: null, rate: 9 },
   swarm:  { spr: "wasp", hp: 3, r: 12, w: 28, h: 16, vx: -260, score: 80, ai: "form", drop: 0.04, shot: null, rate: 3 },
   heavy:  { spr: "armor", hp: 28, r: 22, w: 60, h: 32, vx: -110, score: 400, ai: "hover", drop: 0.2, shot: "fan", rate: 1.6 },
-  gate:   { spr: "armor", hp: 9999, r: 48, w: 72, h: 280, vx: -300, score: 0, ai: "drift", drop: 0, shot: null, rate: 99, solid: true }
+  hazard: { spr: "armor", hp: 9999, r: 36, w: 64, h: 90, vx: -170, score: 0, ai: "drift", drop: 0, shot: null, rate: 99, solid: true },
+  coil:   { spr: "wasp", hp: 55, r: 18, w: 44, h: 28, vx: -200, score: 1800, ai: "coil", drop: 0.45, shot: "aimed", rate: 1.1, hpBar: true, mini: true },
+  coilseg:{ spr: "wasp", hp: 16, r: 14, w: 30, h: 22, vx: -200, score: 80, ai: "coilseg", drop: 0, shot: null, rate: 99 },
+  walker: { spr: "armor", hp: 26, r: 20, w: 56, h: 36, vx: -100, score: 420, ai: "walker", drop: 0.18, shot: "aimed", rate: 1.5 }
 };
 
 AR.Combat.AI = {
@@ -607,5 +614,59 @@ AR.Combat.AI = {
   form: function (e, dt, c, p) {
     e.x += e.vx * dt;
     e.y += Math.sin(e.t * 4 + e.phase) * 50 * dt;
+  },
+  coil: function (e, dt, c, p) {
+    if (!e.trail) e.trail = [];
+    if (e.t < 1.35) {
+      e.x += -240 * dt;
+      e.y += (p.y - e.y) * 1.4 * dt;
+    } else {
+      e.orbit = (e.orbit || 0) + dt * 2.35;
+      var rad = 155 + Math.sin(e.t * 0.8) * 18;
+      var tx = p.x + 40 + Math.cos(e.orbit) * rad;
+      var ty = AR.clamp(p.y + Math.sin(e.orbit) * rad, 70, AR.H - 70);
+      e.x += (tx - e.x) * 5.2 * dt;
+      e.y += (ty - e.y) * 5.2 * dt;
+    }
+    var dx = e.x - (e._lx || e.x), dy = e.y - (e._ly || e.y);
+    if (dx * dx + dy * dy > 0.4) e.rot = Math.atan2(dy, dx);
+    e._lx = e.x; e._ly = e.y;
+    e.trail.unshift({ x: e.x, y: e.y, rot: e.rot });
+    if (e.trail.length > 90) e.trail.pop();
+    e.fire += dt;
+    if (e.fire > e.rate && e.t > 1.4) {
+      e.fire = 0;
+      c.aimedShot(e.x, e.y, p.x, p.y, 280, 5, "#66ffcc");
+    }
+  },
+  coilseg: function (e, dt, c) {
+    var head = e.extra && e.extra.head;
+    if (!head || !head.alive) {
+      e.tDead = (e.tDead || 0) + dt;
+      e.x += (e.vx || -40) * dt;
+      e.y += Math.sin(e.t * 8) * 40 * dt;
+      e.rot += dt * 5;
+      if (e.tDead > 0.07 * (e.extra.seg || 1)) c.killEnemy(e);
+      return;
+    }
+    var tr = head.trail || [];
+    var idx = Math.min(tr.length - 1, (e.extra.seg || 1) * 6);
+    if (idx >= 0 && tr[idx]) {
+      e.x = tr[idx].x;
+      e.y = tr[idx].y;
+      e.rot = tr[idx].rot;
+    }
+  },
+  walker: function (e, dt, c, p) {
+    var side = e.extra && e.extra.side < 0 ? -1 : 1;
+    var rail = side < 0 ? 88 : AR.H - 88;
+    e.x += e.vx * dt;
+    e.y += (rail - e.y) * 6 * dt;
+    e.rot = side < 0 ? 0.15 : -0.15;
+    e.fire += dt;
+    if (e.fire > e.rate) {
+      e.fire = 0;
+      c.aimedShot(e.x, e.y, p.x, p.y, 300, 5, "#ffaa66");
+    }
   }
 };

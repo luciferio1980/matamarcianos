@@ -49,14 +49,14 @@ Todas las teclas se pueden reasignar en **Opciones → Controles**.
 - **Progreso:** fases desbloqueadas, records y estadísticas se guardan en el navegador (`localStorage`).
 - **Gráficos:** fondos cinematográficos pintados, naves y jefes de alta definición, parallax 2.5D, bloom y niebla volumétrica.
 - **Jefes:** piezas destructibles animadas; el casco se va desprendiendo hasta quedar el chasis.
-- **Fases:** oleadas largas, túneles que hay que encajar y pilares que hay que esquivar.
+- **Fases:** oleadas largas, obstáculos de decorado que hay que esquivar y culebras robóticas que rodean en círculo.
 
 ## Las 6 pantallas
 
 1. **Frontera de Acero** — ciudad industrial. Jefe: KRAST-09 Derribamuros.
 2. **Océano de Titanio** — complejo abisal. Jefe: MYRION, el Vientre de Marea.
 3. **Planeta Rojo** — asedio en Vhar-Kesh. Jefe: SKARATH, el Sol de Asedio.
-4. **Ciudad Neón** — Noxveil, con túnel de alta velocidad. Jefe: VELA-NOVA.
+4. **Ciudad Neón** — Noxveil de medianoche. Jefe: VELA-NOVA.
 5. **Mundo Biomecánico** — interior de Orthos. Jefe: ORTHOS, la Puerta Viva.
 6. **El Núcleo** — clímax contra HELIXAR PRIME.
 
