@@ -33,15 +33,7 @@
         booted = true;
         AR.boot();
       }
-      var t0 = performance.now();
-      function tick(now) {
-        var p = Math.min(1, (now - t0) / 400);
-        if (bar) bar.style.width = (p * 100) + "%";
-        if (p < 1) requestAnimationFrame(tick);
-        else go();
-      }
-      requestAnimationFrame(tick);
-      setTimeout(go, 1000);
+      setTimeout(go, 80);
     })();
   </script>
 </body>

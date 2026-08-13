@@ -36,7 +36,6 @@ AR.Game = {
     canvas.height = AR.H;
     AR.Save.load();
     AR.Input.init();
-    AR.Gfx.init();
     AR.Particles.init();
     AR.Combat.init(this);
     this.combat = AR.Combat;
@@ -446,15 +445,21 @@ AR.Game = {
       AR.Particles.draw(ctx);
 
       if (AR.Save.data.options.bloom) {
-        var b = AR.Gfx.bctx;
-        b.clearRect(0, 0, 480, 270);
-        b.globalCompositeOperation = "source-over";
-        b.drawImage(this.canvas, 0, 0, 480, 270);
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        ctx.globalAlpha = 0.22;
-        ctx.drawImage(AR.Gfx.bloom, -8, -8, AR.W + 16, AR.H + 16);
-        ctx.restore();
+        var b = AR.Gfx.bctx, b2 = AR.Gfx.bctx2;
+        if (b && b2) {
+          b.clearRect(0, 0, 640, 360);
+          b.globalCompositeOperation = "source-over";
+          b.drawImage(this.canvas, 0, 0, 640, 360);
+          b2.clearRect(0, 0, 320, 180);
+          b2.drawImage(AR.Gfx.bloom, 0, 0, 320, 180);
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = 0.38;
+          ctx.drawImage(AR.Gfx.bloom2, -18, -18, AR.W + 36, AR.H + 36);
+          ctx.globalAlpha = 0.18;
+          ctx.drawImage(AR.Gfx.bloom, -8, -8, AR.W + 16, AR.H + 16);
+          ctx.restore();
+        }
       }
 
       ctx.save();
@@ -491,8 +496,10 @@ AR.Game = {
 AR.boot = function () {
   var c = document.getElementById("game");
   var boot = document.getElementById("boot");
-  if (boot) boot.classList.add("hidden");
-  AR.Game.boot(c);
+  var bar = document.getElementById("bootbar");
+  AR.Gfx.init(function () {
+    if (boot) boot.classList.add("hidden");
+    AR.Game.boot(c);
     try {
       var q = new URLSearchParams(location.search);
       if (q.get("play") === "1") {
@@ -503,4 +510,7 @@ AR.boot = function () {
         AR.Game.newRun(diff, AR.clamp(st, 0, 5));
       }
     } catch (e) {}
+  }, function (p) {
+    if (bar) bar.style.width = Math.round(p * 100) + "%";
+  });
 };

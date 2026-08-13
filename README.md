@@ -47,6 +47,7 @@ Todas las teclas se pueden reasignar en **Opciones → Controles**.
 - **Puntuación:** bajas, cadenas, bonus de jefes, bonus sin muerte, bonus de tiempo, tabla de records.
 - **Dificultad:** Novato, Arcade, Veterano e Infierno (se desbloquea al terminar las 6 pantallas).
 - **Progreso:** fases desbloqueadas, records y estadísticas se guardan en el navegador (`localStorage`).
+- **Gráficos:** fondos cinematográficos pintados, naves y jefes de alta definición, parallax 2.5D, bloom y niebla volumétrica.
 
 ## Las 6 pantallas
 

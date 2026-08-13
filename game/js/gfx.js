@@ -1,22 +1,71 @@
 /* AETHER RAZE — sprites, particles, 2.5D parallax backgrounds */
 AR.Gfx = {
   sprites: {},
+  art: {},
+  bg: {},
+  bossArt: [],
   bloom: null,
+  bloom2: null,
   grain: null,
   titleBg: null,
   logo: null,
+  ready: false,
 
-  init: function () {
+  init: function (done, progress) {
     this.bloom = document.createElement("canvas");
-    this.bloom.width = 480;
-    this.bloom.height = 270;
+    this.bloom.width = 640;
+    this.bloom.height = 360;
     this.bctx = this.bloom.getContext("2d");
+    this.bloom2 = document.createElement("canvas");
+    this.bloom2.width = 320;
+    this.bloom2.height = 180;
+    this.bctx2 = this.bloom2.getContext("2d");
     this.grain = this._grain();
     this._buildSprites();
-    this.titleBg = new Image();
-    this.titleBg.src = "assets/title-bg.jpg";
-    this.logo = new Image();
-    this.logo.src = "assets/logo-aether-raze.jpg";
+    var self = this;
+    var files = [
+      ["titleBg", "assets/title-bg.jpg"],
+      ["logo", "assets/logo-aether-raze.jpg"],
+      ["player", "assets/spr-player.png", "art"],
+      ["wasp", "assets/spr-wasp.png", "art"],
+      ["drone", "assets/spr-drone.png", "art"],
+      ["kami", "assets/spr-kami.png", "art"],
+      ["armor", "assets/spr-armor.png", "art"],
+      ["squid", "assets/spr-squid.png", "art"],
+      ["gunship", "assets/spr-gunship.png", "art"],
+      ["turret", "assets/spr-turret.png", "art"],
+      ["mine", "assets/spr-mine.png", "art"],
+      ["steel", "assets/bg-steel.jpg", "bg"],
+      ["ocean", "assets/bg-ocean.jpg", "bg"],
+      ["red", "assets/bg-red.jpg", "bg"],
+      ["neon", "assets/bg-neon.jpg", "bg"],
+      ["bio", "assets/bg-bio.jpg", "bg"],
+      ["core", "assets/bg-core.jpg", "bg"]
+    ];
+    var bosses = [
+      "assets/boss-krast.png", "assets/boss-myrion.png", "assets/boss-skarath.png",
+      "assets/boss-vela.png", "assets/boss-orthos.png", "assets/boss-helixar.png"
+    ];
+    var total = files.length + bosses.length, loaded = 0;
+    function one() {
+      loaded++;
+      if (progress) progress(loaded / total);
+      if (loaded >= total) { self.ready = true; if (done) done(); }
+    }
+    files.forEach(function (f) {
+      var im = new Image();
+      im.onload = im.onerror = one;
+      im.src = f[1];
+      if (f[2] === "art") self.art[f[0]] = im;
+      else if (f[2] === "bg") self.bg[f[0]] = im;
+      else self[f[0]] = im;
+    });
+    this.bossArt = bosses.map(function (src) {
+      var im = new Image();
+      im.onload = im.onerror = one;
+      im.src = src;
+      return im;
+    });
   },
 
   _c: function (w, h) {
@@ -176,50 +225,72 @@ AR.Gfx = {
     ctx.restore();
   },
 
+  _imgOk: function (im) { return im && im.complete && im.naturalWidth > 8; },
+
+  drawArt: function (ctx, img, fallback, x, y, dw, dh, rot, flash, sc) {
+    sc = sc || 1;
+    ctx.save();
+    ctx.translate(x, y);
+    if (rot) ctx.rotate(rot);
+    var w = dw * sc, h = dh * sc;
+    if (this._imgOk(img)) {
+      ctx.drawImage(img, -w * 0.5, -h * 0.5, w, h);
+    } else if (fallback) {
+      ctx.drawImage(fallback, -fallback.width * 0.5 * sc, -fallback.height * 0.5 * sc,
+        fallback.width * sc, fallback.height * sc);
+    }
+    if (flash > 0) {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = "rgba(255,255,255," + Math.min(0.55, flash) + ")";
+      ctx.fillRect(-w * 0.5, -h * 0.5, w, h);
+    }
+    ctx.restore();
+  },
+
   drawPlayer: function (ctx, p, t) {
-    var pulse = 0.65 + Math.sin(t * 18) * 0.35;
-    this.glow(ctx, p.x - 22, p.y, 28, "rgba(80,230,255,0.9)", 0.45 * pulse);
+    var pulse = 0.65 + Math.sin(t * 22) * 0.35;
+    this.glow(ctx, p.x - 36, p.y, 42, "rgba(80,230,255,0.95)", 0.55 * pulse);
+    this.glow(ctx, p.x - 18, p.y, 22, "rgba(180,255,255,0.8)", 0.35 * pulse);
+    var img = this.art.player;
+    var dw = 128, dh = this._imgOk(img) ? dw * img.naturalHeight / img.naturalWidth : 44;
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(p.vy * 0.0007);
+    ctx.rotate(p.vy * 0.00055);
     if (p.hurtBlink) ctx.globalAlpha = 0.35 + 0.65 * ((t * 20) % 1 > 0.5 ? 1 : 0);
-    ctx.drawImage(this.sprites.player, -48, -24);
-    ctx.fillStyle = "rgba(180,255,255," + (0.4 + pulse * 0.4) + ")";
+    if (this._imgOk(img)) ctx.drawImage(img, -dw * 0.42, -dh * 0.5, dw, dh);
+    else ctx.drawImage(this.sprites.player, -48, -24);
+    ctx.fillStyle = "rgba(160,255,255," + (0.35 + pulse * 0.5) + ")";
+    ctx.globalCompositeOperation = "lighter";
     ctx.beginPath();
-    ctx.moveTo(-40, -6);
-    ctx.lineTo(-58 - pulse * 16, 0);
-    ctx.lineTo(-40, 6);
+    ctx.moveTo(-48, -7);
+    ctx.lineTo(-78 - pulse * 22, 0);
+    ctx.lineTo(-48, 7);
     ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
     if (p.shield > 0) {
-      ctx.strokeStyle = "rgba(120,220,255,0.85)";
+      ctx.strokeStyle = "rgba(120,220,255,0.9)";
       ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(0, 0, 34 + Math.sin(t * 8) * 2, 0, 6.28); ctx.stroke();
+      ctx.beginPath(); ctx.arc(4, 0, 38 + Math.sin(t * 8) * 2, 0, 6.28); ctx.stroke();
       ctx.strokeStyle = "rgba(80,255,200,0.35)";
-      ctx.beginPath(); ctx.arc(0, 0, 40, t, t + 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(4, 0, 46, t, t + 2.2); ctx.stroke();
     }
     if (p.focus) {
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.arc(4, 0, 5, 0, 6.28); ctx.stroke();
+      ctx.beginPath(); ctx.arc(8, 0, 5, 0, 6.28); ctx.stroke();
       ctx.fillStyle = "#ff3d6e";
-      ctx.beginPath(); ctx.arc(4, 0, 3, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.arc(8, 0, 3, 0, 6.28); ctx.fill();
     }
     ctx.restore();
   },
 
   drawEnemy: function (ctx, e, t) {
-    ctx.save();
-    ctx.translate(e.x, e.y);
-    ctx.rotate(e.rot || 0);
-    var spr = this.sprites[e.spr] || this.sprites.wasp;
-    var sc = e.scale || 1;
-    ctx.drawImage(spr, -spr.width * 0.5 * sc, -spr.height * 0.5 * sc, spr.width * sc, spr.height * sc);
-    if (e.flash > 0) {
-      ctx.globalCompositeOperation = "lighter";
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
-      ctx.fillRect(-spr.width * 0.5 * sc, -spr.height * 0.5 * sc, spr.width * sc, spr.height * sc);
-    }
-    ctx.restore();
+    var img = this.art[e.spr];
+    var sizes = { wasp: 78, drone: 64, kami: 72, armor: 110, squid: 92, gunship: 150, turret: 70, mine: 42 };
+    var dw = sizes[e.spr] || 72;
+    var dh = this._imgOk(img) ? dw * img.naturalHeight / img.naturalWidth : 32;
+    this.glow(ctx, e.x + 10, e.y, 18, "rgba(255,80,60,0.35)", 0.35);
+    this.drawArt(ctx, img, this.sprites[e.spr] || this.sprites.wasp, e.x, e.y, dw, dh, e.rot || 0, e.flash, e.scale || 1);
     if (e.kind === "pop") this.glow(ctx, e.x, e.y, 22, "rgba(255,180,80,0.5)", 0.3);
   }
 };
@@ -245,12 +316,16 @@ AR.Particles = {
     this.burst(x, y, 8, col || "#cff", 280, 2);
   },
   explode: function (x, y, big) {
-    this.burst(x, y, big ? 48 : 18, "#ffcc66", big ? 380 : 240, big ? 6 : 3);
-    this.burst(x, y, big ? 24 : 8, "#fff", big ? 160 : 90, 2);
+    this.burst(x, y, big ? 64 : 22, "#ffcc66", big ? 420 : 260, big ? 7 : 3);
+    this.burst(x, y, big ? 28 : 10, "#fff", big ? 180 : 100, 3);
+    this.burst(x, y, big ? 18 : 6, "#ff6622", big ? 140 : 70, 8);
     this.pool.spawn(function (p) {
-      p.x = x; p.y = y; p.vx = 0; p.vy = 0; p.life = p.max = big ? 0.45 : 0.22;
-      p.r = big ? 70 : 28; p.col = "rgba(255,220,160,0.8)"; p.g = 1; p.drag = 1; p.type = 1;
+      p.x = x; p.y = y; p.vx = 0; p.vy = 0; p.life = p.max = big ? 0.5 : 0.24;
+      p.r = big ? 90 : 32; p.col = "rgba(255,220,160,0.8)"; p.g = 1; p.drag = 1; p.type = 1;
     });
+    if (big) {
+      for (var i = 0; i < 6; i++) this.smoke(x + AR.rand(-20, 20), y + AR.rand(-16, 16));
+    }
   },
   smoke: function (x, y) {
     this.pool.spawn(function (p) {
@@ -326,18 +401,91 @@ AR.Background = {
     }
   },
   draw: function (ctx, stage, speed) {
-    var fn = [this.steel, this.ocean, this.red, this.neon, this.bio, this.core][stage] || this.steel;
-    fn.call(this, ctx, this.cam, this.t, speed);
+    var keys = ["steel", "ocean", "red", "neon", "bio", "core"];
+    var img = AR.Gfx.bg[keys[stage] || "steel"];
+    if (AR.Gfx._imgOk(img)) this.painted(ctx, img, this.cam, this.t, stage);
+    else {
+      var fn = [this.steel, this.ocean, this.red, this.neon, this.bio, this.core][stage] || this.steel;
+      fn.call(this, ctx, this.cam, this.t, speed);
+    }
+    this.atmosphere(ctx, stage, this.t, this.cam);
     for (var i = 0; i < this.debris.length; i++) {
       var d = this.debris[i];
       ctx.save();
       ctx.globalAlpha = Math.min(1, d.life);
       ctx.translate(d.x, d.y);
       ctx.rotate(d.rot);
-      ctx.fillStyle = "#445";
+      ctx.fillStyle = "#6a5848";
       ctx.fillRect(-d.w / 2, -d.h / 2, d.w, d.h);
       ctx.restore();
     }
+  },
+  pan: function (ctx, img, cam, k, y, h, a) {
+    var w = AR.W * 1.08;
+    var period = w * 2;
+    var x = -((cam * k) % period);
+    if (x > 0) x -= period;
+    ctx.save();
+    ctx.globalAlpha = a == null ? 1 : a;
+    while (x < AR.W + 8) {
+      ctx.drawImage(img, x, y, w + 1, h);
+      ctx.save();
+      ctx.translate(x + w * 2, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, y, w + 1, h);
+      ctx.restore();
+      x += period;
+    }
+    ctx.restore();
+  },
+  painted: function (ctx, img, cam, t, stage) {
+    ctx.fillStyle = "#050308";
+    ctx.fillRect(0, 0, AR.W, AR.H);
+    this.pan(ctx, img, cam, 0.14, -120, 1240, 0.55);
+    this.pan(ctx, img, cam, 0.4, 0, AR.H, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    this.pan(ctx, img, cam, 0.78, 480, 680, 1);
+    ctx.restore();
+  },
+  atmosphere: function (ctx, stage, t, cam) {
+    var shafts = [
+      ["rgba(255,140,50,0.07)", 0.35],
+      ["rgba(40,180,255,0.08)", 0.2],
+      ["rgba(255,90,40,0.08)", 0.4],
+      ["rgba(255,40,180,0.07)", 0.25],
+      ["rgba(255,50,70,0.08)", 0.15],
+      ["rgba(255,40,60,0.1)", 0.45]
+    ][stage] || ["rgba(255,140,50,0.07)", 0.3];
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < 7; i++) {
+      var x = ((i * 310 - cam * shafts[1]) % (AR.W + 200)) - 40;
+      ctx.fillStyle = shafts[0];
+      ctx.beginPath();
+      ctx.moveTo(x, -20);
+      ctx.lineTo(x + 40 + i * 8, -20);
+      ctx.lineTo(x + 120 + i * 12, AR.H + 20);
+      ctx.lineTo(x + 30, AR.H + 20);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    var g = ctx.createLinearGradient(0, 0, 0, AR.H);
+    g.addColorStop(0, "rgba(0,0,0,0.28)");
+    g.addColorStop(0.45, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.38)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, AR.W, AR.H);
+    ctx.fillStyle = "rgba(220,200,160,0.35)";
+    for (var d = 0; d < 28; d++) {
+      var dx = (d * 211 - cam * (0.5 + (d % 3) * 0.3)) % AR.W;
+      if (dx < 0) dx += AR.W;
+      var dy = (d * 137 + Math.sin(t * 0.7 + d) * 30) % AR.H;
+      ctx.globalAlpha = 0.15 + (d % 5) * 0.05;
+      ctx.fillRect(dx, dy, 2, 2);
+    }
+    ctx.globalAlpha = 1;
   },
   _sky: function (ctx, c1, c2) {
     var g = ctx.createLinearGradient(0, 0, 0, AR.H);

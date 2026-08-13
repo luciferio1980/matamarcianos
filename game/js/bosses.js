@@ -327,17 +327,25 @@ AR.Boss.prototype.ai5 = function (dt) {
 
 AR.Boss.prototype.draw = function (ctx) {
   ctx.save();
-  ctx.translate(this.x, this.y);
-  if (this.flash > 0.4) ctx.globalAlpha = 0.55;
-  if (this.dying) ctx.globalAlpha = Math.max(0.15, 1 - this.deadT / 3.2);
-  var d = this["draw" + this.id];
-  if (d) d.call(this, ctx);
+  if (this.flash > 0.4) ctx.globalAlpha = 0.7;
+  if (this.dying) ctx.globalAlpha = Math.max(0.12, 1 - this.deadT / 3.2);
+  var img = AR.Gfx.bossArt && AR.Gfx.bossArt[this.id];
+  if (AR.Gfx._imgOk(img)) {
+    var w = [540, 560, 560, 620, 540, 640][this.id];
+    var h = w * img.naturalHeight / img.naturalWidth;
+    AR.Gfx.glow(ctx, this.x, this.y, w * 0.45, "rgba(255,80,40,0.25)", 0.55);
+    ctx.drawImage(img, this.x - w * 0.45, this.y - h * 0.5, w, h);
+  } else {
+    ctx.translate(this.x, this.y);
+    var d = this["draw" + this.id];
+    if (d) d.call(this, ctx);
+  }
   ctx.restore();
   for (var i = 0; i < this.parts.length; i++) {
     var p = this.parts[i];
     if (!p.alive) continue;
     ctx.save();
-    ctx.strokeStyle = p.max > 9000 ? "rgba(255,80,80,0.85)" : "rgba(255,220,80,0.7)";
+    ctx.strokeStyle = p.max > 9000 ? "rgba(255,80,80,0.9)" : "rgba(255,220,80,0.75)";
     ctx.lineWidth = 2;
     if (p.flash > 0) ctx.strokeStyle = "#fff";
     ctx.beginPath(); ctx.arc(this.px(p), this.py(p), p.r, 0, 6.28); ctx.stroke();
