@@ -324,6 +324,23 @@ AR.Gfx = {
   },
 
   drawEnemy: function (ctx, e, t) {
+    if (e.kind === "gate" || e.solid) {
+      ctx.save();
+      var x0 = e.x - e.w / 2, y0 = e.y - e.h / 2;
+      ctx.fillStyle = "#1c161c";
+      ctx.fillRect(x0, y0, e.w, e.h);
+      ctx.fillStyle = "#3a3238";
+      ctx.fillRect(x0 + 8, y0, 10, e.h);
+      ctx.fillStyle = "#2a2228";
+      for (var gy = 0; gy < e.h; gy += 28) ctx.fillRect(x0 + 4, y0 + gy, e.w - 8, 4);
+      ctx.fillStyle = "rgba(255,70,140,0.45)";
+      ctx.fillRect(x0, y0, e.w, 8);
+      ctx.fillRect(x0, y0 + e.h - 8, e.w, 8);
+      ctx.fillStyle = "rgba(255,180,80," + (0.25 + Math.sin(t * 10 + e.y) * 0.2) + ")";
+      ctx.fillRect(x0 + e.w * 0.35, y0 + 12, 10, e.h - 24);
+      ctx.restore();
+      return;
+    }
     var img = this.art[e.spr];
     var sizes = { wasp: 78, drone: 64, kami: 72, armor: 110, squid: 92, gunship: 150, turret: 70, mine: 42 };
     var dw = sizes[e.spr] || 72;
@@ -462,12 +479,18 @@ AR.Background = {
       this.atmosphere(ctx, stage, this.t, this.cam);
       return;
     }
-    if (AR.Gfx._imgOk(mid)) this.pan(ctx, mid, this.cam, 0.34, 0, AR.H, 1);
+    if (AR.Gfx._imgOk(mid)) {
+      this.pan(ctx, mid, this.cam, 0.34, 0, AR.H, 1);
+      this.pan(ctx, mid, this.cam, 0.34, 0, AR.H, 0.45);
+    }
     this.atmosphere(ctx, stage, this.t, this.cam);
   },
   drawFront: function (ctx, stage) {
     var fg = AR.Gfx.fg[this.keyOf(stage)];
-    if (AR.Gfx._imgOk(fg)) this.pan(ctx, fg, this.cam, 0.96, 0, AR.H, 1);
+    if (AR.Gfx._imgOk(fg)) {
+      this.pan(ctx, fg, this.cam, 0.96, 0, AR.H, 1);
+      this.pan(ctx, fg, this.cam, 0.96, 0, AR.H, 0.4);
+    }
     for (var i = 0; i < this.debris.length; i++) {
       var d = this.debris[i];
       ctx.save();
@@ -502,13 +525,13 @@ AR.Background = {
   },
   atmosphere: function (ctx, stage, t, cam) {
     var shafts = [
-      ["rgba(255,140,50,0.07)", 0.35],
-      ["rgba(40,180,255,0.08)", 0.2],
-      ["rgba(255,90,40,0.08)", 0.4],
-      ["rgba(255,40,180,0.07)", 0.25],
-      ["rgba(255,50,70,0.08)", 0.15],
-      ["rgba(255,40,60,0.1)", 0.45]
-    ][stage] || ["rgba(255,140,50,0.07)", 0.3];
+      ["rgba(255,140,50,0.018)", 0.35],
+      ["rgba(40,180,255,0.02)", 0.2],
+      ["rgba(255,90,40,0.02)", 0.4],
+      ["rgba(255,40,180,0.018)", 0.25],
+      ["rgba(255,50,70,0.02)", 0.15],
+      ["rgba(255,40,60,0.025)", 0.45]
+    ][stage] || ["rgba(255,140,50,0.018)", 0.3];
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (var i = 0; i < 7; i++) {
@@ -524,13 +547,13 @@ AR.Background = {
     }
     ctx.restore();
     var g = ctx.createLinearGradient(0, 0, 0, AR.H);
-    g.addColorStop(0, "rgba(0,0,0,0.28)");
+    g.addColorStop(0, "rgba(0,0,0,0.06)");
     g.addColorStop(0.45, "rgba(0,0,0,0)");
-    g.addColorStop(1, "rgba(0,0,0,0.38)");
+    g.addColorStop(1, "rgba(0,0,0,0.08)");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, AR.W, AR.H);
-    ctx.fillStyle = "rgba(220,200,160,0.35)";
-    for (var d = 0; d < 28; d++) {
+    ctx.fillStyle = "rgba(220,200,160,0.2)";
+    for (var d = 0; d < 16; d++) {
       var dx = (d * 211 - cam * (0.5 + (d % 3) * 0.3)) % AR.W;
       if (dx < 0) dx += AR.W;
       var dy = (d * 137 + Math.sin(t * 0.7 + d) * 30) % AR.H;

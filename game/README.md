@@ -1,6 +1,6 @@
 # AETHER RAZE
 
-Matamarcianos horizontal de desplazamiento lateral para PC. Seis pantallas, seis jefes, armas cambiables, power-ups, puntuación arcade y banda sonora electrónica original sintetizada en tiempo real.
+Matamarcianos horizontal de desplazamiento lateral para PC. Seis pantallas, seis jefes, armas cambiables, power-ups, puntuación arcade y banda sonora **synthwave** original sintetizada en tiempo real (una pista distinta por menú, fase y jefe).
 
 Identidad, naves, enemigos, escenarios y música son originales. El diseño se inspira en la *filosofía* del género (preciso, justo, adictivo), no en obras protegidas.
 
@@ -48,6 +48,8 @@ Todas las teclas se pueden reasignar en **Opciones → Controles**.
 - **Dificultad:** Novato, Arcade, Veterano e Infierno (se desbloquea al terminar las 6 pantallas).
 - **Progreso:** fases desbloqueadas, records y estadísticas se guardan en el navegador (`localStorage`).
 - **Gráficos:** fondos cinematográficos pintados, naves y jefes de alta definición, parallax 2.5D, bloom y niebla volumétrica.
+- **Jefes:** piezas destructibles animadas; el casco se va desprendiendo hasta quedar el chasis.
+- **Fases:** oleadas largas, túneles que hay que encajar y pilares que hay que esquivar.
 
 ## Las 6 pantallas
 

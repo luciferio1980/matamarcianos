@@ -1,4 +1,4 @@
-/* AETHER RAZE — hard techno soundtrack + SFX (Web Audio) */
+/* AETHER RAZE — synthwave soundtrack + SFX (Web Audio) */
 AR.Audio = {
   ctx: null,
   master: null,
@@ -25,14 +25,14 @@ AR.Audio = {
       this.sfxG = this.ctx.createGain();
       this.duck = this.ctx.createGain();
       this.delayG = this.ctx.createGain();
-      this.delayG.gain.value = 0.28;
+      this.delayG.gain.value = 0.36;
       this.delay = this.ctx.createDelay();
-      this.delay.delayTime.value = 0.31;
+      this.delay.delayTime.value = 0.42;
       var fb = this.ctx.createGain();
-      fb.gain.value = 0.42;
+      fb.gain.value = 0.48;
       var df = this.ctx.createBiquadFilter();
       df.type = "highpass";
-      df.frequency.value = 550;
+      df.frequency.value = 380;
       this.delay.connect(fb);
       fb.connect(this.delay);
       this.delay.connect(df);
@@ -106,58 +106,57 @@ AR.Audio = {
   pump: function (t) {
     if (!this.duck) return;
     this.duck.gain.cancelScheduledValues(t);
-    this.duck.gain.setValueAtTime(0.38, t);
-    this.duck.gain.exponentialRampToValueAtTime(1, t + 0.14);
+    this.duck.gain.setValueAtTime(0.42, t);
+    this.duck.gain.exponentialRampToValueAtTime(1, t + 0.22);
   },
   kick: function (t, g) {
-    this.osc("sine", 190, t, 0.26, g || 1.12, this.musicG, 38);
-    this.osc("sine", 78, t, 0.14, 0.52, this.musicG, 30);
-    this.osc("triangle", 980, t, 0.018, 0.22, this.musicG, 90);
-    this.noise(t, 0.022, 0.18, 1400, this.musicG);
+    this.osc("sine", 150, t, 0.32, g || 0.95, this.musicG, 36);
+    this.osc("sine", 62, t, 0.18, 0.4, this.musicG, 28);
+    this.noise(t, 0.018, 0.08, 900, this.musicG);
     this.pump(t);
   },
   snare: function (t, g) {
-    this.noise(t, 0.16, (g || 0.4), 1800, this.musicG);
-    this.osc("triangle", 210, t, 0.1, 0.16, this.musicG, 70);
-    this.noise(t, 0.04, 0.12, 6000, this.musicG);
+    this.noise(t, 0.18, (g || 0.36), 1400, this.musicG);
+    this.osc("triangle", 180, t, 0.12, 0.1, this.musicG, 70);
+    this.noise(t, 0.05, 0.14, 5000, this.musicG);
+  },
+  clap: function (t, g) {
+    this.noise(t, 0.04, (g || 0.22), 1800, this.musicG);
+    this.noise(t + 0.012, 0.09, (g || 0.22) * 0.7, 2400, this.musicG);
+    this.osc("triangle", 420, t, 0.05, 0.04, this.musicG, 180);
   },
   hat: function (t, open, g) {
-    this.noise(t, open ? 0.13 : 0.024, (g || 0.14), 9000, this.duck || this.musicG);
+    this.noise(t, open ? 0.16 : 0.03, (g || 0.1), 7000, this.duck || this.musicG);
   },
   bass: function (t, freq, dur, g) {
     var dest = this.duck || this.musicG;
+    this.osc("sine", freq, t, dur, (g || 0.22) * 0.85, dest);
     var o = this.ctx.createOscillator();
     o.type = "sawtooth";
     o.frequency.setValueAtTime(freq, t);
-    var o2 = this.ctx.createOscillator();
-    o2.type = "square";
-    o2.frequency.setValueAtTime(freq * 0.5, t);
     var f = this.ctx.createBiquadFilter();
     f.type = "lowpass";
-    f.Q.value = 9;
-    f.frequency.setValueAtTime(900, t);
-    f.frequency.exponentialRampToValueAtTime(140, t + dur * 0.7);
+    f.Q.value = 2.2;
+    f.frequency.setValueAtTime(520, t);
+    f.frequency.exponentialRampToValueAtTime(180, t + dur * 0.8);
     var gn = this.ctx.createGain();
     gn.gain.setValueAtTime(0.0001, t);
-    gn.gain.exponentialRampToValueAtTime(g || 0.26, t + 0.01);
+    gn.gain.exponentialRampToValueAtTime((g || 0.22) * 0.55, t + 0.02);
     gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(f); o2.connect(f); f.connect(gn); gn.connect(dest);
+    o.connect(f); f.connect(gn); gn.connect(dest);
     o.start(t); o.stop(t + dur + 0.02);
-    o2.start(t); o2.stop(t + dur + 0.02);
   },
-  acid: function (t, freq, dur, g) {
+  arp: function (t, freq, dur, g) {
     var dest = this.duck || this.musicG;
     var o = this.ctx.createOscillator();
-    o.type = "sawtooth";
+    o.type = "square";
     o.frequency.setValueAtTime(freq, t);
     var f = this.ctx.createBiquadFilter();
     f.type = "lowpass";
-    f.Q.value = 14;
-    f.frequency.setValueAtTime(2800, t);
-    f.frequency.exponentialRampToValueAtTime(220, t + dur * 0.85);
+    f.frequency.value = 2200;
     var gn = this.ctx.createGain();
     gn.gain.setValueAtTime(0.0001, t);
-    gn.gain.exponentialRampToValueAtTime(g || 0.11, t + 0.008);
+    gn.gain.exponentialRampToValueAtTime(g || 0.05, t + 0.01);
     gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(f); f.connect(gn); gn.connect(dest);
     if (this.delay) gn.connect(this.delay);
@@ -167,14 +166,14 @@ AR.Audio = {
     var dest = this.duck || this.musicG;
     var gn = this.ctx.createGain();
     gn.gain.setValueAtTime(0.0001, t);
-    gn.gain.exponentialRampToValueAtTime(g || 0.09, t + 0.035);
-    gn.gain.setValueAtTime(g || 0.09, t + dur * 0.55);
+    gn.gain.exponentialRampToValueAtTime(g || 0.1, t + 0.08);
+    gn.gain.setValueAtTime(g || 0.1, t + dur * 0.62);
     gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     var f = this.ctx.createBiquadFilter();
     f.type = "lowpass";
-    f.Q.value = 1.4;
-    f.frequency.setValueAtTime(4200, t);
-    f.frequency.exponentialRampToValueAtTime(1400, t + dur * 0.8);
+    f.Q.value = 0.9;
+    f.frequency.setValueAtTime(2800, t);
+    f.frequency.exponentialRampToValueAtTime(1100, t + dur * 0.85);
     var det = [0.996, 1, 1.004];
     for (var i = 0; i < 3; i++) {
       var o = this.ctx.createOscillator();
@@ -209,7 +208,7 @@ AR.Audio = {
         o.frequency.setValueAtTime(freq * thirds[n] * (1 + i * 0.006), t);
         var f = this.ctx.createBiquadFilter();
         f.type = "lowpass";
-        f.frequency.value = 540;
+        f.frequency.value = 480;
         var gn = this.ctx.createGain();
         gn.gain.setValueAtTime(0.0001, t);
         gn.gain.linearRampToValueAtTime((g || 0.028) * (n === 0 ? 1 : 0.7), t + 0.3);
@@ -235,67 +234,102 @@ AR.Audio = {
     var R = -1;
     this.TRACKS = {
       title: {
-        bpm: 138, bars: 8, root: "F#",
-        melody: [7,R,12,R, 15,R,12,10, 7,R,3,0, 7,5,3,R, 12,R,10,7, 15,R,19,15, 12,10,7,5, 3,R,0,R]
+        bpm: 104, bars: 8, root: "C#", drive: 0,
+        melody: [0,R,R,3, 7,R,12,R, 10,R,7,5, 3,R,0,R, 7,R,12,R, 15,R,12,10, 7,R,5,3, 0,R,R,R],
+        arp: [0,7,12,7, 3,7,12,15, 0,7,10,7, 3,7,12,7],
+        bass: [0,-1,-1,0, 7,-1,-1,3, 0,-1,5,-1, 3,-1,0,-1]
       },
       menu: {
-        bpm: 130, bars: 8, root: "E",
-        melody: [0,R,7,R, 12,R,10,7, 8,R,7,5, 3,R,0,R, 7,R,12,15, 12,10,8,7, 5,R,3,R, 0,R,R,R]
+        bpm: 100, bars: 8, root: "F", drive: 0,
+        melody: [0,R,7,R, 12,R,10,7, 5,R,3,R, 0,R,R,R, 7,R,12,15, 12,10,7,R, 5,R,3,R, 0,R,R,R],
+        arp: [0,3,7,12, 0,5,7,10, 0,3,7,12, 5,7,10,12],
+        bass: [0,-1,-1,-1, 7,-1,-1,3, 0,-1,5,-1, 3,-1,0,-1]
+      },
+      hangar: {
+        bpm: 96, bars: 8, root: "G#", drive: 0,
+        melody: [0,R,3,7, 12,R,10,7, 5,R,3,0, 8,R,7,3, 12,R,15,12, 10,7,5,3, 7,R,0,R, 0,R,R,R],
+        arp: [0,3,7,12, 0,5,8,12, 0,3,7,10, 5,8,12,7],
+        bass: [0,-1,3,-1, 7,-1,5,0, 0,-1,8,-1, 3,-1,7,-1]
       },
       steel: {
-        bpm: 142, bars: 8, root: "A",
-        melody: [0,R,3,7, 12,R,10,7, 5,R,3,0, 7,R,R,R, 12,R,10,7, 15,R,12,10, 7,5,3,0, 7,R,0,R]
+        bpm: 108, bars: 8, root: "F", drive: 0,
+        melody: [0,R,R,7, 12,R,10,7, 5,R,3,0, 7,R,R,R, 12,R,15,12, 10,R,7,5, 3,R,0,R, 7,R,0,R],
+        arp: [0,7,12,7, 5,7,12,15, 0,7,10,7, 3,7,12,7],
+        bass: [0,-1,0,7, 0,-1,5,3, 0,-1,0,7, 10,-1,7,3]
       },
       steelBoss: {
-        bpm: 150, bars: 8, root: "A", boss: 1,
-        melody: [0,3,7,12, 15,12,10,7, 12,R,15,R, 12,10,7,3, 0,7,12,15, 19,15,12,10, 7,R,3,R, 0,R,R,R]
+        bpm: 116, bars: 8, root: "F", boss: 1, drive: 2,
+        melody: [0,R,7,12, 15,R,12,7, 10,R,7,5, 3,R,0,R, 12,R,15,19, 15,12,10,7, 5,R,3,R, 0,R,7,R],
+        arp: [0,7,12,15, 7,12,15,19, 0,5,10,15, 7,12,15,12],
+        bass: [0,-1,0,7, 0,-1,3,10, 0,-1,0,7, 5,-1,10,7]
       },
       ocean: {
-        bpm: 138, bars: 8, root: "D",
-        melody: [7,R,12,R, 10,7,5,3, 0,R,7,R, 12,10,7,R, 15,R,12,10, 7,R,5,3, 7,5,3,0, R,R,0,R]
+        bpm: 98, bars: 8, root: "D", drive: 0,
+        melody: [7,R,R,12, 10,R,7,3, 0,R,7,R, 12,R,10,7, 15,R,12,10, 7,R,5,3, 7,R,3,0, R,R,0,R],
+        arp: [0,7,10,7, 3,7,12,10, 0,5,10,7, 3,7,10,12],
+        bass: [0,-1,-1,7, 10,-1,7,3, 0,-1,-1,5, 7,-1,3,0]
       },
       oceanBoss: {
-        bpm: 146, bars: 8, root: "D", boss: 1,
-        melody: [0,7,12,15, 12,10,7,3, 10,R,7,R, 12,15,12,7, 0,3,7,12, 15,12,10,7, 5,R,3,R, 0,R,R,R]
+        bpm: 108, bars: 8, root: "D", boss: 1, drive: 2,
+        melody: [0,R,7,12, 15,R,12,7, 10,R,7,3, 0,R,R,R, 12,R,15,12, 10,7,5,3, 7,R,3,R, 0,R,7,R],
+        arp: [0,7,12,15, 3,7,12,15, 0,10,12,15, 7,12,15,19],
+        bass: [0,-1,7,10, 0,-1,3,7, 0,-1,10,7, 5,-1,3,0]
       },
       red: {
-        bpm: 144, bars: 8, root: "E",
-        melody: [0,R,3,7, 8,R,7,3, 5,R,3,0, 7,R,12,R, 8,7,5,3, 0,R,7,R, 12,8,7,5, 3,R,0,R]
+        bpm: 106, bars: 8, root: "C", drive: 0,
+        melody: [0,R,3,7, 8,R,7,3, 5,R,3,0, 7,R,12,R, 8,R,7,5, 3,R,0,R, 7,5,3,0, R,R,0,R],
+        arp: [0,3,7,8, 0,5,7,12, 0,3,8,7, 5,7,12,8],
+        bass: [0,-1,3,-1, 8,-1,7,3, 0,-1,5,-1, 8,-1,3,0]
       },
       redBoss: {
-        bpm: 152, bars: 8, root: "E", boss: 1,
-        melody: [0,3,7,8, 12,8,7,3, 10,R,8,7, 5,3,0,R, 12,R,15,12, 8,7,5,3, 8,7,3,0, R,R,0,R]
+        bpm: 114, bars: 8, root: "C", boss: 1, drive: 2,
+        melody: [0,3,7,8, 12,R,8,7, 5,R,3,0, 8,R,12,R, 15,R,12,8, 7,5,3,0, 8,7,5,3, 0,R,R,R],
+        arp: [0,7,12,15, 8,12,15,19, 0,7,8,12, 7,12,15,12],
+        bass: [0,3,0,8, 0,-1,7,12, 0,3,8,7, 5,-1,8,3]
       },
       neon: {
-        bpm: 140, bars: 8, root: "F#",
-        melody: [0,R,7,12, 15,R,12,7, 8,R,7,5, 3,R,0,R, 12,R,15,19, 15,12,10,7, 8,7,5,3, 0,R,R,R]
+        bpm: 114, bars: 8, root: "F#", drive: 1,
+        melody: [0,R,7,12, 15,R,12,7, 8,R,7,5, 3,R,0,R, 12,R,15,19, 15,12,10,7, 8,7,5,3, 0,R,R,R],
+        arp: [0,7,12,19, 7,12,15,12, 0,8,12,15, 7,12,19,15],
+        bass: [0,-1,7,12, 0,-1,8,7, 0,-1,5,3, 8,-1,7,0]
       },
       neonBoss: {
-        bpm: 150, bars: 8, root: "F#", boss: 1,
-        melody: [0,7,12,15, 19,15,12,8, 7,R,5,3, 0,R,7,R, 12,15,19,15, 12,10,8,7, 5,R,3,R, 0,R,R,R]
+        bpm: 122, bars: 8, root: "F#", boss: 1, drive: 2,
+        melody: [0,7,12,15, 19,R,15,12, 8,R,7,5, 3,R,0,R, 12,15,19,15, 12,10,8,7, 5,R,3,R, 0,R,7,R],
+        arp: [0,12,15,19, 7,12,19,15, 0,8,15,19, 12,15,19,24],
+        bass: [0,7,12,7, 0,8,15,8, 0,7,12,19, 8,7,5,0]
       },
       bio: {
-        bpm: 136, bars: 8, root: "G#",
-        melody: [0,R,3,6, 8,R,6,3, 1,R,0,R, 8,6,3,R, 11,R,8,6, 3,R,1,0, 6,3,1,0, R,R,0,R]
+        bpm: 102, bars: 8, root: "E", drive: 0,
+        melody: [0,R,3,7, 8,R,7,3, 1,R,0,R, 8,7,3,R, 12,R,8,7, 5,R,3,1, 0,R,3,R, 0,R,R,R],
+        arp: [0,3,7,8, 1,3,7,12, 0,3,8,7, 3,7,8,12],
+        bass: [0,-1,3,-1, 8,-1,7,1, 0,-1,8,-1, 3,-1,1,0]
       },
       bioBoss: {
-        bpm: 144, bars: 8, root: "G#", boss: 1,
-        melody: [0,1,3,6, 8,6,3,1, 0,R,11,8, 6,3,0,R, 8,11,13,11, 8,6,3,1, 3,R,0,R, R,R,0,R]
+        bpm: 110, bars: 8, root: "E", boss: 1, drive: 2,
+        melody: [0,3,7,8, 12,R,8,7, 5,R,3,1, 0,R,8,R, 12,R,15,12, 8,7,5,3, 7,R,3,R, 0,R,R,R],
+        arp: [0,7,8,12, 3,8,12,15, 0,7,12,15, 8,12,15,19],
+        bass: [0,3,8,7, 0,-1,1,8, 0,3,7,12, 8,-1,1,0]
       },
       core: {
-        bpm: 148, bars: 8, root: "A",
-        melody: [0,R,7,12, 15,R,12,7, 10,R,7,5, 3,R,0,R, 12,R,15,19, 15,12,10,7, 8,7,5,3, 0,R,7,R]
+        bpm: 116, bars: 8, root: "A", drive: 1,
+        melody: [0,R,7,12, 15,R,12,7, 10,R,7,5, 3,R,0,R, 12,R,15,19, 15,12,10,7, 8,7,5,3, 0,R,7,R],
+        arp: [0,7,12,15, 7,12,15,19, 0,10,12,15, 7,12,19,15],
+        bass: [0,-1,7,0, 10,-1,7,3, 0,-1,12,7, 5,-1,10,0]
       },
       coreBoss: {
-        bpm: 154, bars: 8, root: "A", boss: 1, final: 1,
-        melody: [0,3,7,12, 15,19,15,12, 10,7,12,15, 19,15,12,7, 0,7,12,15, 19,22,19,15, 12,10,7,3, 0,R,7,R]
+        bpm: 124, bars: 8, root: "A", boss: 1, final: 1, drive: 2,
+        melody: [0,7,12,15, 19,R,15,12, 10,7,12,15, 19,15,12,7, 0,7,12,19, 15,12,10,7, 12,10,7,3, 0,R,7,R],
+        arp: [0,12,15,19, 7,12,19,24, 0,10,15,19, 12,15,19,15],
+        bass: [0,7,12,19, 0,10,15,7, 0,7,12,15, 10,7,3,0]
       },
       victory: {
-        bpm: 128, bars: 8, root: "A",
-        melody: [0,R,4,7, 12,R,16,12, 9,R,7,4, 0,R,R,R, 7,R,12,16, 19,16,12,9, 7,R,4,R, 0,R,R,R]
+        bpm: 108, bars: 8, root: "A", drive: 0,
+        melody: [0,R,4,7, 12,R,16,12, 9,R,7,4, 0,R,R,R, 7,R,12,16, 19,16,12,9, 7,R,4,R, 0,R,R,R],
+        arp: [0,4,7,12, 4,7,12,16, 0,4,9,12, 7,12,16,12]
       },
       over: {
-        bpm: 96, bars: 8, root: "A",
+        bpm: 84, bars: 8, root: "A", drive: 0,
         melody: [0,R,R,R, 3,R,7,R, 5,R,3,R, 0,R,R,R, 7,R,5,R, 3,R,0,R, R,R,R,R, 0,R,R,R]
       }
     };
@@ -332,32 +366,41 @@ AR.Audio = {
     var s = st % 16;
     var bar = (st / 16) | 0;
     var boss = !!tr.boss;
+    var drive = tr.drive || 0;
     var root = tr.root || "A";
     var lose = this.trackId === "over";
     var menuish = this.trackId === "title" || this.trackId === "menu";
 
-    if (s === 0 || s === 4 || s === 8 || s === 12) this.kick(t, lose ? 0.5 : boss ? 1.05 : 0.92);
-    if (boss && (s === 2 || s === 6 || s === 10 || s === 14)) this.kick(t, 0.38);
-    if (!lose && (s === 4 || s === 12)) this.snare(t, boss ? 0.46 : 0.34);
+    if (s === 0 || s === 8) this.kick(t, lose ? 0.45 : boss ? 0.95 : 0.82);
+    if (drive >= 1 && (s === 4 || s === 12)) this.kick(t, 0.55);
+    if (boss && (s === 2 || s === 10)) this.kick(t, 0.32);
+    if (!lose && (s === 4 || s === 12)) {
+      this.snare(t, boss ? 0.32 : 0.22);
+      this.clap(t, boss ? 0.28 : 0.2);
+    }
     if (!lose) {
-      this.hat(t, s === 6 || s === 14, (s % 2 === 0) ? 0.12 : 0.055);
-      if (s === 2 || s === 10) this.hat(t, true, 0.08);
+      this.hat(t, s === 6 || s === 14, (s % 2 === 0) ? 0.09 : 0.04);
+      if (drive >= 1 && s % 4 === 2) this.hat(t, true, 0.06);
     }
 
-    var bassPat = boss
-      ? [0, -1, 0, 7, 0, -1, 3, 10, 0, -1, 0, 7, 3, -1, 10, 7]
-      : [0, -1, -1, 0, 7, -1, 0, 3, 0, -1, -1, 0, 5, -1, 7, 3];
-    if (menuish) bassPat = [0, -1, -1, -1, 7, -1, -1, 3, 0, -1, 5, -1, 3, -1, 0, -1];
+    var bassPat = tr.bass;
+    if (!bassPat) {
+      bassPat = boss
+        ? [0, -1, 0, 7, 0, -1, 3, 10, 0, -1, 0, 7, 5, -1, 10, 7]
+        : [0, -1, -1, 0, 7, -1, -1, 3, 0, -1, -1, 0, 5, -1, 7, 3];
+    }
+    if (menuish && !tr.bass) bassPat = [0, -1, -1, -1, 7, -1, -1, 3, 0, -1, 5, -1, 3, -1, 0, -1];
     if (lose) bassPat = [0, -1, -1, -1, -1, -1, -1, -1, 3, -1, -1, -1, -1, -1, -1, -1];
     var bd = bassPat[s];
-    if (bd >= 0) this.bass(t, this.note(root, 1) * Math.pow(2, bd / 12), stepDur * (boss ? 1.05 : 1.28), boss ? 0.24 : 0.2);
+    if (bd >= 0) this.bass(t, this.note(root, 1) * Math.pow(2, bd / 12), stepDur * (boss ? 1.15 : 1.55), boss ? 0.2 : 0.18);
 
-    if (!lose && !menuish && (s % 2 === 1) && bar % 2 === 1) {
-      var ad = [0, 0, 7, 3, 0, 10, 7, 5][(s >> 1) % 8];
-      this.acid(t, this.note(root, 2) * Math.pow(2, ad / 12), stepDur * 0.82, boss ? 0.12 : 0.09);
+    var arp = tr.arp;
+    if (arp && !lose && (drive >= 1 || bar % 2 === 1 || boss)) {
+      var ad = arp[s % arp.length];
+      if (ad >= 0) this.arp(t, this.note(root, 5) * Math.pow(2, ad / 12), stepDur * 0.7, boss ? 0.055 : 0.042);
     }
 
-    if (s === 0 && bar % 2 === 0) this.pad(t, this.note(root, 3), stepDur * 16, lose ? 0.022 : 0.03);
+    if (s === 0 && bar % 2 === 0) this.pad(t, this.note(root, 3), stepDur * 16, lose ? 0.02 : 0.038);
 
     var mel = tr.melody || [];
     var mi = st % mel.length;
@@ -366,8 +409,9 @@ AR.Audio = {
       var hold = 1;
       for (var k = 1; k < 8 && mel[(mi + k) % mel.length] < 0; k++) hold++;
       var freq = this.note(root, 4) * Math.pow(2, deg / 12);
-      this.lead(t, freq, stepDur * hold * 0.94, boss ? 0.11 : 0.095);
-      if (hold >= 2) this.harmony(t, freq * 0.5 * Math.pow(2, 7 / 12), stepDur * hold * 0.9, 0.04);
+      this.lead(t, freq, stepDur * hold * 0.96, boss ? 0.11 : 0.1);
+      if (hold >= 2) this.harmony(t, freq * Math.pow(2, 7 / 12) * 0.5, stepDur * hold * 0.9, 0.038);
+      if (hold >= 3 && !lose) this.harmony(t, freq * 2, stepDur * hold * 0.5, 0.028);
     }
     if (boss && s === 0) this.alarm(t);
     if (tr.final && s === 8) this.alarm(t);

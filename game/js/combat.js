@@ -74,6 +74,10 @@ AR.Combat = {
       e.shot = def.shot;
       e.rate = (def.rate || 1.4) / diff.rate;
       e.extra = opt;
+      e.solid = !!def.solid;
+      if (opt.h) e.h = opt.h;
+      if (opt.w) e.w = opt.w;
+      if (e.solid) e.r = Math.max(e.w, e.h) * 0.45;
     });
   },
   spawnPickup: function (x, y, kind) {
@@ -296,9 +300,12 @@ AR.Combat = {
     this.enemies.each(function (e) {
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 8);
       AR.Combat.AI[e.ai](e, dt, self, p);
-      if (e.x < -80 || e.y < -120 || e.y > AR.H + 120) e.alive = false;
-      if (!p.dead && p.inv <= 0 && AR.circleHit(p.x + 4, p.y, 6, e.x, e.y, e.r * 0.7)) {
-        self.hurtPlayer(e.x, e.y);
+      if (e.x < -120 || e.y < -160 || e.y > AR.H + 160) e.alive = false;
+      if (!p.dead && p.inv <= 0) {
+        var hit = e.solid
+          ? AR.aabbHit(p.x, p.y, 14, 14, e.x, e.y, e.w, e.h)
+          : AR.circleHit(p.x + 4, p.y, 6, e.x, e.y, e.r * 0.7);
+        if (hit) self.hurtPlayer(e.x, e.y);
       }
     });
   },
@@ -380,6 +387,7 @@ AR.Combat = {
     }
   },
   hurtEnemy: function (e, dmg) {
+    if (e.solid) return;
     e.hp -= dmg;
     e.flash = 1;
     AR.Particles.spark(e.x, e.y, "#fff");
@@ -508,10 +516,14 @@ AR.Combat.KINDS = {
   gunship:{ spr: "gunship", hp: 70, r: 36, w: 110, h: 50, vx: -70, score: 1200, ai: "gunship", drop: 0.5, shot: "fan", rate: 1.2, hpBar: true, mini: true },
   mine:   { spr: "mine", hp: 4, r: 14, w: 28, h: 28, vx: -100, score: 80, ai: "mine", drop: 0.04, shot: null, rate: 9 },
   swarm:  { spr: "wasp", hp: 3, r: 12, w: 28, h: 16, vx: -260, score: 80, ai: "form", drop: 0.04, shot: null, rate: 3 },
-  heavy:  { spr: "armor", hp: 28, r: 22, w: 60, h: 32, vx: -110, score: 400, ai: "hover", drop: 0.2, shot: "fan", rate: 1.6 }
+  heavy:  { spr: "armor", hp: 28, r: 22, w: 60, h: 32, vx: -110, score: 400, ai: "hover", drop: 0.2, shot: "fan", rate: 1.6 },
+  gate:   { spr: "armor", hp: 9999, r: 48, w: 72, h: 280, vx: -300, score: 0, ai: "drift", drop: 0, shot: null, rate: 99, solid: true }
 };
 
 AR.Combat.AI = {
+  drift: function (e, dt) {
+    e.x += e.vx * dt;
+  },
   sine: function (e, dt, c, p) {
     e.x += e.vx * dt;
     e.y += Math.sin(e.t * 2.2 + e.phase) * e.amp * dt * 2.2;

@@ -81,9 +81,27 @@ ok("six stages with bosses", () => {
     const ev = AR.Stages.build(i, 0);
     assert.ok(ev.length >= 20, "stage " + i + " too short: " + ev.length);
     const last = ev[ev.length - 1];
+    assert.ok(last.t >= 100, "stage " + i + " ends too soon: " + last.t);
     let started = false;
+    let sawTunnel = false;
+    let sawGate = false;
     last.fn({ startBoss() { started = true; }, toast() {}, combat: { spawnEnemy() {} }, scrollMul: 1 });
     assert.ok(started, "stage " + i + " does not start boss");
+    const g = {
+      toast() {},
+      scrollMul: 1,
+      combat: {
+        spawnEnemy(kind) { if (kind === "gate") sawGate = true; }
+      },
+      startBoss() {}
+    };
+    Object.defineProperty(g, "tunnel", {
+      set(v) { if (v > 0) sawTunnel = true; this._tun = v; },
+      get() { return this._tun || 0; }
+    });
+    ev.forEach((e) => e.fn(g));
+    assert.ok(sawTunnel, "stage " + i + " has no tunnel");
+    assert.ok(sawGate, "stage " + i + " has no gate obstacles");
   }
 });
 ok("difficulty curve", () => {

@@ -26,35 +26,88 @@ AR.Boss = function (id, g) {
 
 AR.Boss.prototype._setupParts = function (id) {
   var self = this;
-  function part(name, ox, oy, r, hp, score) {
-    self.parts.push({ name: name, ox: ox, oy: oy, r: r, hp: hp, max: hp, alive: true, score: score || 1500, flash: 0 });
+  this.wreck = [];
+  function part(name, ox, oy, r, hp, score, kind) {
+    self.parts.push({
+      name: name, ox: ox, oy: oy, r: r, hp: hp, max: hp, alive: true,
+      score: score || 1500, flash: 0, kind: kind || "armor"
+    });
   }
   if (id === 0) {
-    part("cañón izq", -80, -90, 34, 90, 2000);
-    part("cañón der", -80, 90, 34, 90, 2000);
-    part("núcleo", -20, 0, 42, 9999, 0);
+    part("cañón sup", -90, -100, 32, 110, 2200, "gun");
+    part("cañón inf", -90, 100, 32, 110, 2200, "gun");
+    part("ala sup", 20, -130, 40, 100, 1800, "armor");
+    part("ala inf", 20, 130, 40, 100, 1800, "armor");
+    part("motor", -130, 0, 36, 120, 2000, "engine");
+    part("morro", 90, 0, 34, 90, 1600, "armor");
+    part("núcleo", -10, 0, 44, 9999, 0, "core");
   } else if (id === 1) {
-    part("ojo", 40, -20, 36, 9999, 0);
-    part("aleta", -60, 80, 40, 110, 1800);
-    part("aleta", -60, -80, 40, 110, 1800);
+    part("ojo", 50, -16, 34, 9999, 0, "core");
+    part("aleta sup", -50, -95, 38, 100, 1800, "armor");
+    part("aleta inf", -50, 95, 38, 100, 1800, "armor");
+    part("cabeza", 80, -40, 30, 90, 1500, "armor");
+    part("cola", -130, 10, 36, 110, 1700, "engine");
+    part("branquia", -20, 70, 28, 80, 1400, "armor");
   } else if (id === 2) {
-    part("corona", 20, -110, 40, 140, 2200);
-    part("brazo", -90, 70, 36, 120, 1800);
-    part("núcleo", -10, 10, 44, 9999, 0);
+    part("corona", 10, -120, 38, 130, 2200, "armor");
+    part("brazo", -100, 80, 36, 120, 1800, "gun");
+    part("hombrera", 40, -70, 34, 100, 1600, "armor");
+    part("escudo", -70, -40, 36, 110, 1700, "armor");
+    part("pierna", -40, 120, 34, 90, 1500, "armor");
+    part("núcleo", -10, 10, 44, 9999, 0, "core");
   } else if (id === 3) {
-    part("puente", 50, -40, 38, 160, 2500);
-    part("motor", -100, 60, 40, 130, 2000);
-    part("batería", -20, 80, 34, 100, 1600);
+    part("puente", 60, -50, 36, 140, 2500, "armor");
+    part("motor", -120, 50, 40, 130, 2000, "engine");
+    part("torreta", -40, -90, 30, 90, 1600, "gun");
+    part("ala", 20, 90, 38, 110, 1800, "armor");
+    part("proa", 110, 10, 32, 90, 1500, "armor");
+    part("batería", -20, 70, 32, 100, 1600, "armor");
+    part("núcleo", 0, 0, 42, 9999, 0, "core");
   } else if (id === 4) {
-    part("tentáculo", -120, -130, 30, 80, 1400);
-    part("tentáculo", -90, 150, 30, 80, 1400);
-    part("tentáculo", 40, -160, 30, 80, 1400);
-    part("corazón", 10, 10, 48, 9999, 0);
+    part("tentáculo", -130, -140, 28, 85, 1400, "armor");
+    part("tentáculo", -100, 150, 28, 85, 1400, "armor");
+    part("tentáculo", 50, -170, 28, 85, 1400, "armor");
+    part("caparazón", -40, -80, 36, 110, 1800, "armor");
+    part("mandíbula", 70, 40, 32, 90, 1500, "gun");
+    part("corazón", 10, 10, 48, 9999, 0, "core");
   } else {
-    part("ala izq", -40, -140, 42, 150, 2400);
-    part("ala der", -40, 140, 42, 150, 2400);
-    part("máscara", 30, -20, 40, 180, 3000);
-    part("núcleo", 0, 20, 50, 9999, 0);
+    part("ala izq", -30, -150, 40, 140, 2400, "armor");
+    part("ala der", -30, 150, 40, 140, 2400, "armor");
+    part("máscara", 40, -30, 38, 160, 3000, "armor");
+    part("cañón", -90, 0, 34, 120, 2000, "gun");
+    part("motor", -140, 80, 32, 100, 1800, "engine");
+    part("corona", 20, -110, 30, 90, 1600, "armor");
+    part("núcleo", 0, 20, 50, 9999, 0, "core");
+  }
+};
+
+AR.Boss.prototype.partAlive = function (name) {
+  for (var i = 0; i < this.parts.length; i++) {
+    if (this.parts[i].name.indexOf(name) === 0 && this.parts[i].alive && this.parts[i].kind !== "core") return true;
+  }
+  return false;
+};
+
+AR.Boss.prototype.stripPart = function (p) {
+  if (!p.alive || p.kind === "core") return;
+  p.alive = false;
+  p.hp = 0;
+  this.g.addScore(p.score, true);
+  AR.Particles.explode(this.px(p), this.py(p), true);
+  AR.Audio.sfx("explodeBig", this.x);
+  AR.FX.boom(10);
+  this.hp -= this.max * 0.07;
+  var n = 8 + ((p.r / 7) | 0);
+  var cols = ["#5a4a40", "#8a7060", "#3a322c", "#6a5850", "#2a221c"];
+  for (var i = 0; i < n; i++) {
+    this.wreck.push({
+      x: this.px(p), y: this.py(p),
+      vx: AR.rand(-280, 60), vy: AR.rand(-220, 220),
+      rot: Math.random() * 6, vr: AR.rand(-6, 6),
+      w: AR.rand(14, 46), h: AR.rand(8, 28),
+      life: AR.rand(1.4, 3.2), col: cols[i % cols.length],
+      kind: i % 3
+    });
   }
 };
 
@@ -63,25 +116,18 @@ AR.Boss.prototype.py = function (p) { return this.y + p.oy; };
 
 AR.Boss.prototype.hurt = function (dmg, x, y) {
   if (this.intro > 0 || this.dying) return;
-  var hitPart = null, best = 80;
+  var hitPart = null, best = 90;
   for (var i = 0; i < this.parts.length; i++) {
     var p = this.parts[i];
     if (!p.alive) continue;
     var d = AR.len(this.px(p) - x, this.py(p) - y);
-    if (d < p.r + 18 && d < best) { best = d; hitPart = p; }
+    if (d < p.r + 20 && d < best) { best = d; hitPart = p; }
   }
-  if (hitPart && hitPart.max < 9000) {
+  if (hitPart && hitPart.kind !== "core") {
     hitPart.hp -= dmg;
     hitPart.flash = 1;
-    if (hitPart.hp <= 0) {
-      hitPart.alive = false;
-      this.g.addScore(hitPart.score, true);
-      AR.Particles.explode(this.px(hitPart), this.py(hitPart), true);
-      AR.Audio.sfx("explodeBig", this.x);
-      AR.FX.boom(10);
-      this.hp -= this.max * 0.08;
-    }
-    dmg *= 0.45;
+    if (hitPart.hp <= 0) this.stripPart(hitPart);
+    dmg *= 0.4;
   }
   this.hp -= dmg;
   this.flash = 1;
@@ -138,14 +184,37 @@ AR.Boss.prototype.update = function (dt) {
   this.t += dt;
   this.flash = Math.max(0, this.flash - dt * 5);
   for (var i = 0; i < this.parts.length; i++) this.parts[i].flash = Math.max(0, this.parts[i].flash - dt * 5);
+  for (var w = this.wreck.length - 1; w >= 0; w--) {
+    var fr = this.wreck[w];
+    fr.x += fr.vx * dt; fr.y += fr.vy * dt;
+    fr.vy += 90 * dt; fr.rot += fr.vr * dt; fr.life -= dt;
+    if (fr.life <= 0) this.wreck.splice(w, 1);
+  }
+  if (!this.dying && !this.intro) {
+    for (var d = 0; d < this.parts.length; d++) {
+      var dp = this.parts[d];
+      if (!dp.alive && Math.random() < dt * 6) AR.Particles.spark(this.px(dp), this.py(dp), "#ff6622");
+      if (dp.alive && dp.kind === "engine" && Math.random() < dt * 8) {
+        AR.Particles.smoke(this.px(dp) - 18, this.py(dp));
+      }
+    }
+  }
   if (this.dying) {
     this.deadT += dt;
-    if ((this.deadT * 12 | 0) !== ((this.deadT - dt) * 12 | 0)) {
-      AR.Particles.explode(this.x + AR.rand(-80, 80), this.y + AR.rand(-80, 80), true);
-      AR.Audio.sfx("explode", this.x);
-      AR.FX.boom(8);
+    if ((this.deadT * 4.5 | 0) !== ((this.deadT - dt) * 4.5 | 0)) {
+      for (var j = 0; j < this.parts.length; j++) {
+        if (this.parts[j].alive && this.parts[j].kind !== "core") {
+          this.stripPart(this.parts[j]);
+          break;
+        }
+      }
     }
-    if (this.deadT > 3.2) {
+    if ((this.deadT * 10 | 0) !== ((this.deadT - dt) * 10 | 0)) {
+      AR.Particles.explode(this.x + AR.rand(-90, 90), this.y + AR.rand(-90, 90), true);
+      AR.Audio.sfx("explode", this.x);
+      AR.FX.boom(6);
+    }
+    if (this.deadT > 4.2) {
       this.alive = false;
       this.g.onBossDead();
     }
@@ -179,8 +248,8 @@ AR.Boss.prototype.ai0 = function (dt) {
   if (this.fire > rate) {
     this.fire = 0;
     this.pat = (this.pat + 1) % 4;
-    if (this.pat === 0) c.fanShot(this.x - 90, this.y, p.x, p.y, 5, 0.12, 320, "#ff6644");
-    else if (this.pat === 1) {
+    if (this.pat === 0 && this.partAlive("cañón")) c.fanShot(this.x - 90, this.y, p.x, p.y, 5, 0.12, 320, "#ff6644");
+    else if (this.pat === 1 && this.partAlive("cañón")) {
       for (var i = 0; i < 3; i++) c.eShot(this.x - 80, this.y - 80 + i * 80, -380, 0, 6, "#ffaa44");
     } else if (this.pat === 2) c.aimedShot(this.x - 40, this.y, p.x, p.y, 420, 7, "#ff3366");
     else c.ringShot(this.x - 20, this.y, this.phase === 3 ? 10 : 8, 210, "#ff8866", this.t);
@@ -247,8 +316,10 @@ AR.Boss.prototype.ai3 = function (dt) {
     this.pat = (this.pat + 1) % 5;
     if (this.pat === 0) {
       for (var i = 0; i < 8; i++) c.eShot(this.x - 120, 80 + i * 120, -420, 0, 5, "#ff3d8a");
-    } else if (this.pat === 1) c.fanShot(this.x - 80, this.y, p.x, p.y, 5, 0.16, 360, "#3cf0ff");
-    else if (this.pat === 2) c.ringShot(this.x, this.y, 10, 240, "#ff3d8a", this.t);
+    } else if (this.pat === 1) {
+      if (this.partAlive("torreta")) c.fanShot(this.x - 80, this.y, p.x, p.y, 5, 0.16, 360, "#3cf0ff");
+      else c.ringShot(this.x, this.y, 8, 220, "#3cf0ff", this.t);
+    } else if (this.pat === 2) c.ringShot(this.x, this.y, 10, 240, "#ff3d8a", this.t);
     else if (this.pat === 3) {
       c.spawnEnemy("wasp", { x: this.x - 40, y: this.y - 40 });
       c.spawnEnemy("wasp", { x: this.x - 40, y: this.y + 40 });
@@ -302,8 +373,10 @@ AR.Boss.prototype.ai5 = function (dt) {
     this.fire = 0;
     this.pat = (this.pat + 1) % 6;
     if (this.pat === 0) c.ringShot(this.x, this.y, 14, 230, "#ff3355", this.t);
-    else if (this.pat === 1) c.fanShot(this.x - 60, this.y, p.x, p.y, 7, 0.1, 340, "#ffaa33");
-    else if (this.pat === 2) {
+    else if (this.pat === 1) {
+      if (this.partAlive("cañón")) c.fanShot(this.x - 60, this.y, p.x, p.y, 7, 0.1, 340, "#ffaa33");
+      else c.ringShot(this.x, this.y, 10, 260, "#ffaa33", this.t);
+    } else if (this.pat === 2) {
       for (var i = 0; i < 5; i++) c.aimedShot(this.x - 40, this.y - 80 + i * 40, p.x, p.y, 380, 6, "#fff");
     } else if (this.pat === 3) {
       c.spawnEnemy("armor", { x: AR.W + 30, y: 200 });
@@ -326,30 +399,377 @@ AR.Boss.prototype.ai5 = function (dt) {
 };
 
 AR.Boss.prototype.draw = function (ctx) {
+  var i, p;
   ctx.save();
-  if (this.flash > 0.4) ctx.globalAlpha = 0.7;
-  if (this.dying) ctx.globalAlpha = Math.max(0.12, 1 - this.deadT / 3.2);
-  var img = AR.Gfx.bossArt && AR.Gfx.bossArt[this.id];
-  if (AR.Gfx._imgOk(img)) {
-    var w = [540, 560, 560, 620, 540, 640][this.id];
-    var h = w * img.naturalHeight / img.naturalWidth;
-    AR.Gfx.glow(ctx, this.x, this.y, w * 0.45, "rgba(255,80,40,0.25)", 0.55);
-    ctx.drawImage(img, this.x - w * 0.45, this.y - h * 0.5, w, h);
-  } else {
-    ctx.translate(this.x, this.y);
-    var d = this["draw" + this.id];
-    if (d) d.call(this, ctx);
-  }
+  ctx.translate(this.x, this.y + Math.sin(this.t * 1.5) * 5);
+  ctx.rotate(Math.sin(this.t * 0.65) * 0.035 + Math.sin(this.t * 2.4) * 0.012);
+  if (this.flash > 0.45) ctx.globalAlpha = 0.72;
+  this.drawChassis(ctx);
+  this.drawSkin(ctx);
+  this.drawAnim(ctx);
   ctx.restore();
-  for (var i = 0; i < this.parts.length; i++) {
-    var p = this.parts[i];
+  for (i = 0; i < this.wreck.length; i++) {
+    var fr = this.wreck[i];
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, fr.life);
+    ctx.translate(fr.x, fr.y);
+    ctx.rotate(fr.rot);
+    ctx.fillStyle = fr.col;
+    ctx.beginPath();
+    if (fr.kind === 1) {
+      ctx.moveTo(-fr.w / 2, 0);
+      ctx.lineTo(0, -fr.h / 2);
+      ctx.lineTo(fr.w / 2, fr.h / 4);
+      ctx.lineTo(-fr.w / 6, fr.h / 2);
+    } else if (fr.kind === 2) {
+      ctx.rect(-fr.w / 2, -3, fr.w, 6);
+      ctx.moveTo(-4, -fr.h / 2);
+      ctx.lineTo(4, -fr.h / 2);
+      ctx.lineTo(4, fr.h / 2);
+      ctx.lineTo(-4, fr.h / 2);
+    } else {
+      ctx.moveTo(-fr.w / 2, -fr.h / 2);
+      ctx.lineTo(fr.w / 2, -fr.h / 3);
+      ctx.lineTo(fr.w / 3, fr.h / 2);
+      ctx.lineTo(-fr.w / 2, fr.h / 4);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,90,40,0.4)";
+    ctx.fillRect(-fr.w / 2, -2, fr.w, 3);
+    ctx.fillStyle = "rgba(255,220,180,0.35)";
+    ctx.fillRect(-3, -3, 6, 6);
+    ctx.restore();
+  }
+  for (i = 0; i < this.parts.length; i++) {
+    p = this.parts[i];
     if (!p.alive) continue;
     ctx.save();
-    ctx.strokeStyle = p.max > 9000 ? "rgba(255,80,80,0.9)" : "rgba(255,220,80,0.75)";
+    ctx.strokeStyle = p.kind === "core" ? "rgba(255,70,70,0.5)" : "rgba(255,210,90,0.5)";
     ctx.lineWidth = 2;
     if (p.flash > 0) ctx.strokeStyle = "#fff";
-    ctx.beginPath(); ctx.arc(this.px(p), this.py(p), p.r, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(this.px(p), this.py(p) + Math.sin(this.t * 1.5) * 5, p.r, 0, 6.28); ctx.stroke();
+    if (p.kind !== "core") {
+      var ratio = Math.max(0, p.hp / p.max);
+      ctx.strokeStyle = ratio > 0.45 ? "#8f8" : "#f84";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(this.px(p), this.py(p) + Math.sin(this.t * 1.5) * 5, p.r + 4, -1.2, -1.2 + 6.28 * ratio);
+      ctx.stroke();
+    }
     ctx.restore();
+  }
+};
+
+AR.Boss.prototype.drawChassis = function (ctx) {
+  var t = this.t, pulse = 0.5 + Math.sin(t * 7) * 0.5;
+  AR.Gfx.glow(ctx, 8, 4, 70 + pulse * 20, this.dying ? "rgba(255,50,20,0.55)" : "rgba(255,140,50,0.28)", 0.7);
+  var fn = this["chassis" + this.id];
+  if (fn) fn.call(this, ctx, t, pulse);
+  else this.chassis0(ctx, t, pulse);
+  ctx.fillStyle = this.dying ? "#ff2a10" : "#ffb040";
+  ctx.globalAlpha = 0.45 + pulse * 0.5;
+  ctx.beginPath(); ctx.arc(10, 2, 14 + pulse * 8, 0, 6.28); ctx.fill();
+  ctx.globalAlpha = 1;
+};
+
+AR.Boss.prototype.chassis0 = function (ctx, t) {
+  ctx.strokeStyle = "#6a5c52";
+  ctx.lineWidth = 3;
+  for (var i = -5; i <= 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-120, i * 24);
+    ctx.lineTo(90, i * 16 + Math.sin(t * 2.2 + i) * 4);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#3a342e";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(-125, -88, 220, 176);
+  ctx.fillStyle = "#1a1612";
+  ctx.fillRect(-36, -110, 28, 220);
+  var pist = 18 + Math.sin(t * 3.1) * 10;
+  ctx.fillStyle = "#8a7360";
+  ctx.fillRect(-150, -70, pist + 40, 12);
+  ctx.fillRect(-150, 58, pist + 40, 12);
+  ctx.strokeStyle = "#a09080";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-80, -50);
+  ctx.quadraticCurveTo(10, Math.sin(t * 4) * 14, 80, -30);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-80, 50);
+  ctx.quadraticCurveTo(10, Math.sin(t * 4 + 2) * 14, 80, 30);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,180,80,0.4)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-70, -50, 90, 100);
+};
+
+AR.Boss.prototype.chassis1 = function (ctx, t) {
+  ctx.strokeStyle = "#3a7080";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 130, 58, 0, 0, 6.28);
+  ctx.stroke();
+  for (var i = -3; i <= 3; i++) {
+    ctx.beginPath();
+    ctx.ellipse(-10, 0, 90 + i * 8, 22 + Math.abs(i) * 6 + Math.sin(t * 2 + i) * 3, 0, 0, 6.28);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#7ad";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(-130, 8);
+  ctx.quadraticCurveTo(-90, Math.sin(t * 3) * 20, -40, 0);
+  ctx.stroke();
+  ctx.fillStyle = "#0a2830";
+  ctx.beginPath(); ctx.ellipse(40, -8, 28, 18, 0, 0, 6.28); ctx.fill();
+};
+
+AR.Boss.prototype.chassis2 = function (ctx, t) {
+  ctx.strokeStyle = "#6a3020";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(20, -20); ctx.lineTo(20, 40); ctx.lineTo(-20, 110); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(20, -20); ctx.lineTo(-10, -90); ctx.lineTo(30, -130 + Math.sin(t * 2) * 6); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(10, 10);
+  ctx.lineTo(-90 + Math.sin(t * 1.6) * 8, 70);
+  ctx.lineTo(-40, 120);
+  ctx.stroke();
+  ctx.strokeRect(-50, -40, 80, 70);
+  ctx.fillStyle = "#2a1008";
+  ctx.fillRect(-18, -18, 40, 36);
+  for (var i = 0; i < 5; i++) {
+    ctx.strokeStyle = "#a05030";
+    ctx.beginPath();
+    ctx.moveTo(0, -100);
+    ctx.lineTo(-20 + i * 12, -150 - Math.sin(t * 3 + i) * 8);
+    ctx.stroke();
+  }
+};
+
+AR.Boss.prototype.chassis3 = function (ctx, t) {
+  ctx.strokeStyle = "#4a3060";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(-170, -70, 320, 140);
+  for (var i = 0; i < 6; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-150 + i * 50, -70);
+    ctx.lineTo(-150 + i * 50, 70);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#1a1028";
+  ctx.fillRect(40, -40, 80, 36);
+  var pulse = 0.4 + Math.sin(t * 16) * 0.6;
+  ctx.fillStyle = "rgba(60,240,255," + (0.25 + pulse * 0.4) + ")";
+  ctx.fillRect(-160, -8, 40 + pulse * 30, 16);
+  ctx.fillRect(-160, 20, 30 + pulse * 22, 10);
+  ctx.strokeStyle = "#ff3d8a";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-140, -50, 260, 8);
+  ctx.strokeRect(-140, 42, 260, 8);
+};
+
+AR.Boss.prototype.chassis4 = function (ctx, t) {
+  ctx.strokeStyle = "#6a3038";
+  ctx.lineWidth = 6;
+  for (var i = 0; i < 7; i++) {
+    var x = -90 + i * 28;
+    ctx.beginPath();
+    ctx.arc(x, Math.sin(t * 2.2 + i) * 8, 16, 0, 6.28);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#2a1014";
+  ctx.beginPath(); ctx.ellipse(8, 6, 50, 40, 0, 0, 6.28); ctx.fill();
+  var beat = 0.5 + Math.sin(t * 5) * 0.5;
+  ctx.fillStyle = "rgba(255,40,70," + (0.35 + beat * 0.4) + ")";
+  ctx.beginPath(); ctx.ellipse(10, 8, 18 + beat * 8, 14 + beat * 6, 0, 0, 6.28); ctx.fill();
+  ctx.strokeStyle = "#a44";
+  ctx.lineWidth = 8;
+  for (i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(10, 8);
+    ctx.quadraticCurveTo(-40, -80 + i * 80 + Math.sin(t * 2 + i) * 18, -110, -60 + i * 50);
+    ctx.stroke();
+  }
+};
+
+AR.Boss.prototype.chassis5 = function (ctx, t) {
+  ctx.save();
+  ctx.rotate(t * 0.35);
+  ctx.strokeStyle = "#5a2040";
+  ctx.lineWidth = 3;
+  for (var i = 0; i < 8; i++) {
+    ctx.beginPath();
+    ctx.arc(0, 0, 30 + i * 12, t + i, t + i + 2.2);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.strokeStyle = "#8a4060";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(-20, -140); ctx.lineTo(10, 0); ctx.lineTo(-20, 140); ctx.stroke();
+  ctx.strokeRect(-50, -50, 90, 100);
+  ctx.fillStyle = "#180810";
+  ctx.beginPath(); ctx.arc(8, 12, 22, 0, 6.28); ctx.fill();
+};
+
+AR.Boss.prototype.drawSkin = function (ctx) {
+  var img = AR.Gfx.bossArt && AR.Gfx.bossArt[this.id];
+  var w = [540, 560, 560, 620, 540, 640][this.id];
+  if (AR.Gfx._imgOk(img)) {
+    var h = w * img.naturalHeight / img.naturalWidth;
+    if (!this._skin) this._skin = document.createElement("canvas");
+    var buf = this._skin;
+    if (buf.width !== w) { buf.width = w; buf.height = h; }
+    var bx = buf.getContext("2d");
+    bx.clearRect(0, 0, w, h);
+    bx.globalCompositeOperation = "source-over";
+    bx.drawImage(img, 0, 0, w, h);
+    bx.globalCompositeOperation = "destination-out";
+    var live = 0, armor = 0;
+    for (var i = 0; i < this.parts.length; i++) {
+      var p = this.parts[i];
+      if (p.kind === "core") continue;
+      armor++;
+      var cx = w * 0.45 + p.ox, cy = h * 0.5 + p.oy;
+      if (!p.alive) {
+        bx.beginPath();
+        bx.ellipse(cx, cy, p.r * 1.7, p.r * 1.35, 0, 0, 6.28);
+        bx.fill();
+        bx.beginPath();
+        bx.ellipse(cx + p.r * 0.4, cy - p.r * 0.2, p.r, p.r * 0.7, 0.4, 0, 6.28);
+        bx.fill();
+      } else live++;
+    }
+    var wear = 1 - this.hp / this.max;
+    if (wear > 0.2) {
+      for (var k = 0; k < 10; k++) {
+        bx.beginPath();
+        bx.arc(w * 0.25 + (k * 53) % 220, h * 0.3 + (k * 37) % 110, 8 + wear * 22, 0, 6.28);
+        bx.fill();
+      }
+    }
+    var skinA = this.dying ? Math.max(0.08, 0.82 - this.deadT * 0.32) : 0.22 + 0.7 * (armor ? live / armor : 1);
+    ctx.save();
+    ctx.globalAlpha = skinA;
+    ctx.drawImage(buf, -w * 0.45, -h * 0.5);
+    ctx.restore();
+  } else {
+    ctx.save();
+    var d = this["draw" + this.id];
+    if (d) d.call(this, ctx);
+    ctx.restore();
+  }
+};
+
+AR.Boss.prototype.drawAnim = function (ctx) {
+  var pl = this.g.combat.player;
+  var t = this.t;
+  var i, p;
+  for (i = 0; i < 6; i++) {
+    var lx = -90 + ((t * 70 + i * 40) % 200);
+    ctx.fillStyle = "rgba(255,200,90," + (0.15 + Math.sin(t * 8 + i) * 0.12) + ")";
+    ctx.fillRect(lx, -6, 18, 3);
+  }
+  for (i = 0; i < this.parts.length; i++) {
+    p = this.parts[i];
+    if (!p.alive) {
+      ctx.fillStyle = "#140806";
+      ctx.beginPath(); ctx.arc(p.ox, p.oy, p.r * 0.78, 0, 6.28); ctx.fill();
+      ctx.strokeStyle = "rgba(255,70,30," + (0.35 + Math.sin(t * 9 + i) * 0.2) + ")";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(p.ox, p.oy, p.r * 0.5 + Math.sin(t * 8) * 3, 0, 6.28); ctx.stroke();
+      ctx.strokeStyle = "rgba(40,20,16,0.9)";
+      ctx.lineWidth = 3;
+      for (var s = 0; s < 3; s++) {
+        ctx.beginPath();
+        ctx.moveTo(p.ox - p.r * 0.4, p.oy - p.r * 0.2 + s * 6);
+        ctx.lineTo(p.ox + p.r * 0.35, p.oy + p.r * 0.15 + s * 4);
+        ctx.stroke();
+      }
+      continue;
+    }
+    if (p.kind === "armor") {
+      ctx.save();
+      ctx.translate(p.ox, p.oy + Math.sin(t * 3 + i) * 3);
+      ctx.rotate(Math.sin(t * 1.4 + i) * 0.08);
+      ctx.fillStyle = "rgba(180,160,140,0.28)";
+      ctx.fillRect(-p.r * 0.7, -p.r * 0.35, p.r * 1.4, p.r * 0.7);
+      ctx.strokeStyle = "rgba(255,220,180,0.35)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-p.r * 0.7, -p.r * 0.35, p.r * 1.4, p.r * 0.7);
+      ctx.restore();
+    }
+    if (p.kind === "gun") {
+      var ang = Math.atan2(pl.y - (this.y + p.oy), pl.x - (this.x + p.ox));
+      ctx.save();
+      ctx.translate(p.ox, p.oy);
+      ctx.rotate(ang);
+      ctx.fillStyle = "#6a727c";
+      ctx.fillRect(-8, -8, 18, 16);
+      ctx.fillStyle = "#9aa8b4";
+      ctx.fillRect(8, -5, 36 + Math.sin(t * 14) * 3, 10);
+      ctx.fillStyle = "#2a3038";
+      ctx.fillRect(12, -2, 24, 4);
+      ctx.fillStyle = "#ff5533";
+      ctx.fillRect(42, -2, 10, 4);
+      if (Math.sin(t * 18 + i) > 0.7) {
+        ctx.fillStyle = "rgba(255,180,80,0.7)";
+        ctx.fillRect(50, -3, 16, 6);
+      }
+      ctx.restore();
+    }
+    if (p.kind === "engine") {
+      var pulse = 0.45 + Math.sin(t * 20 + i) * 0.55;
+      AR.Gfx.glow(ctx, p.ox - 18, p.oy, 22 + pulse * 14, "rgba(80,230,255,0.9)", 0.65);
+      ctx.fillStyle = "rgba(180,255,255," + (0.3 + pulse * 0.4) + ")";
+      ctx.beginPath();
+      ctx.moveTo(p.ox - 8, p.oy - 8);
+      ctx.lineTo(p.ox - 40 - pulse * 18, p.oy);
+      ctx.lineTo(p.ox - 8, p.oy + 8);
+      ctx.fill();
+    }
+  }
+  var ex = -this.bodyR() * 0.62;
+  for (var k = -1; k <= 1; k++) {
+    var g = 0.4 + Math.sin(t * 18 + k) * 0.6;
+    AR.Gfx.glow(ctx, ex, k * 30, 20 + g * 16, this.id === 1 ? "rgba(40,220,255,0.85)" : "rgba(255,140,50,0.7)", 0.55);
+  }
+  ctx.fillStyle = this.phase >= 3 ? "#ff3344" : "#3cf0ff";
+  ctx.globalAlpha = 0.45 + Math.sin(t * 6) * 0.35;
+  ctx.fillRect(40, -8, 18, 6);
+  ctx.fillRect(40, 4, 18, 6);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "rgba(255,240,180,0.2)";
+  ctx.lineWidth = 1;
+  for (i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-80, -40 + i * 22 + Math.sin(t * 5 + i) * 4);
+    ctx.lineTo(60, -30 + i * 18);
+    ctx.stroke();
+  }
+  if (this.id === 4) {
+    ctx.strokeStyle = "rgba(255,80,110,0.55)";
+    ctx.lineWidth = 8;
+    for (i = 0; i < this.parts.length; i++) {
+      p = this.parts[i];
+      if (p.name === "tentáculo" && p.alive) {
+        ctx.beginPath();
+        ctx.moveTo(10, 8);
+        ctx.quadraticCurveTo(p.ox * 0.4, p.oy * 0.5 + Math.sin(t * 2.2 + i) * 24, p.ox, p.oy);
+        ctx.stroke();
+        ctx.fillStyle = "rgba(255,100,120,0.45)";
+        ctx.beginPath(); ctx.arc(p.ox, p.oy, 10 + Math.sin(t * 4 + i) * 3, 0, 6.28); ctx.fill();
+      }
+    }
+  }
+  if (this.id === 3) {
+    ctx.fillStyle = "rgba(60,240,255," + (0.2 + Math.sin(t * 10) * 0.15) + ")";
+    for (i = 0; i < 5; i++) ctx.fillRect(-140 + i * 55, -62 + Math.sin(t * 6 + i) * 3, 36, 6);
   }
 };
 
