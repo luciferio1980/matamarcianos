@@ -25,8 +25,24 @@ AR.Combat = {
       hp: 5, maxHp: 5, lives: 3, bombs: 2, energy: 100,
       weapon: "vulcan", power: 1, shield: 0, speedBoost: 0,
       fireCd: 0, charge: 0, charging: false, inv: 0, hurtBlink: false, focus: false,
-      dead: false, deadT: 0, mul: 1, chain: 0, chainT: 0, hidden: false
+      dead: false, deadT: 0, mul: 1, chain: 0, chainT: 0, hidden: false,
+      roll: 0, craftId: "aurora", art: "player", speedMul: 1, dmgMul: 1, rateMul: 1
     };
+  },
+  applyCraft: function (c) {
+    var p = this.player;
+    c = c || AR.craft(p.craftId);
+    p.craftId = c.id;
+    p.art = c.art;
+    p.weapon = c.weapon;
+    p.maxHp = c.hp;
+    p.hp = c.hp;
+    p.speedMul = c.speed;
+    p.dmgMul = c.dmg;
+    p.rateMul = c.rate;
+    p.bombs = c.bombs;
+    p.lives = c.lives;
+    p.roll = 0;
   },
   resetPlayer: function (keepScore) {
     var p = this.player;
@@ -117,24 +133,26 @@ AR.Combat = {
   },
   doShot: function () {
     var p = this.player, pow = p.power, w = p.weapon;
-    var dmg = 8 * this.g.diff.dmg * (1 + (pow - 1) * 0.22);
+    var dmg = 8 * this.g.diff.dmg * (1 + (pow - 1) * 0.22) * (p.dmgMul || 1);
+    var rate = p.rateMul || 1;
     if (w === "vulcan") {
-      p.fireCd = 0.09 - pow * 0.008;
+      p.fireCd = (0.09 - pow * 0.008) / rate;
       this.pShot(p.x + 28, p.y, 1180, 0, dmg, "#b8ffff", 3);
       if (pow >= 2) { this.pShot(p.x + 20, p.y - 10, 1180, 0, dmg * 0.7, "#b8ffff", 3); this.pShot(p.x + 20, p.y + 10, 1180, 0, dmg * 0.7, "#b8ffff", 3); }
       if (pow >= 4) { this.pShot(p.x + 16, p.y - 18, 1100, -80, dmg * 0.5, "#8ff", 3); this.pShot(p.x + 16, p.y + 18, 1100, 80, dmg * 0.5, "#8ff", 3); }
       AR.Audio.sfx("shot", p.x);
     } else if (w === "spread") {
-      p.fireCd = 0.16;
-      var n = 3 + (pow >= 3 ? 2 : 0);
+      p.fireCd = 0.16 / rate;
+      var n = 3 + (pow >= 3 ? 2 : 0) + (p.craftId === "halcon" ? 2 : 0);
+      var spr = p.craftId === "halcon" ? 0.22 : 0.18;
       for (var i = 0; i < n; i++) {
-        var a = (i - (n - 1) / 2) * 0.18;
+        var a = (i - (n - 1) / 2) * spr;
         this.pShot(p.x + 24, p.y, Math.cos(a) * 980, Math.sin(a) * 980, dmg * 0.75, "#ffe14a", 4);
       }
       AR.Audio.sfx("shot", p.x);
     } else if (w === "missile") {
-      p.fireCd = 0.28;
-      var m = 1 + (pow >= 2 ? 1 : 0) + (pow >= 4 ? 1 : 0);
+      p.fireCd = 0.28 / rate;
+      var m = 1 + (pow >= 2 ? 1 : 0) + (pow >= 4 ? 1 : 0) + (p.craftId === "lanza" ? 1 : 0);
       for (var j = 0; j < m; j++) this.launchMissile(p.x + 10, p.y + (j - (m - 1) / 2) * 16, dmg * 1.6);
       AR.Audio.sfx("missile", p.x);
     } else if (w === "laser") {
@@ -142,7 +160,7 @@ AR.Combat = {
     }
   },
   laserBeam: function (dt) {
-    var p = this.player, dmg = 55 * dt * this.g.diff.dmg * p.power;
+    var p = this.player, dmg = 55 * dt * this.g.diff.dmg * p.power * (p.dmgMul || 1);
     var y0 = p.y - 6 - p.power * 2, y1 = p.y + 6 + p.power * 2;
     var self = this;
     this.enemies.each(function (e) {
@@ -214,11 +232,15 @@ AR.Combat = {
       return;
     }
     p.focus = AR.Input.btn("focus");
-    var spd = (p.focus ? 210 : 460) * (p.speedBoost > 0 ? 1.35 : 1);
+    var spd = (p.focus ? 210 : 460) * (p.speedBoost > 0 ? 1.35 : 1) * (p.speedMul || 1);
     var ax = AR.Input.axis();
     p.x = AR.clamp(p.x + ax.x * spd * dt, 40, AR.W * 0.62);
     p.y = AR.clamp(p.y + ax.y * spd * dt, 50, AR.H - 50);
     p.vy = ax.y * spd;
+    var want = 0;
+    if (ax.y < -0.18) want = 0.82;
+    else if (ax.y > 0.18) want = -0.82;
+    p.roll += (want - (p.roll || 0)) * Math.min(1, (want ? 18 : 11) * dt);
     p.inv = Math.max(0, p.inv - dt);
     p.hurtBlink = p.inv > 0;
     p.shield = Math.max(0, p.shield - dt);
@@ -450,10 +472,11 @@ AR.Combat = {
     if (p.weapon === "laser" && AR.Input.btn("fire") && !p.dead) {
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      var w = 6 + p.power * 3;
+      var w = 6 + p.power * 3 + (p.craftId === "sable" ? 4 : 0);
+      var col = (AR.craft(p.craftId).accent) || "#ff4ad2";
       var grd = ctx.createLinearGradient(p.x, p.y, AR.W, p.y);
       grd.addColorStop(0, "#fff");
-      grd.addColorStop(0.2, "#ff4ad2");
+      grd.addColorStop(0.2, col);
       grd.addColorStop(1, "rgba(255,0,120,0)");
       ctx.fillStyle = grd;
       ctx.globalAlpha = 0.85;

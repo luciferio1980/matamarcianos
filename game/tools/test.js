@@ -96,6 +96,13 @@ ok("weapons and pickups exist", () => {
   assert.ok(AR.WEAPONS.indexOf("missile") >= 0);
   assert.strictEqual(AR.WEAPONS.length, 4);
 });
+ok("four crafts with unique weapons", () => {
+  assert.strictEqual(AR.CRAFTS.length, 4);
+  const weps = AR.CRAFTS.map((c) => c.weapon);
+  assert.strictEqual(new Set(weps).size, 4);
+  assert.strictEqual(AR.craft("sable").weapon, "laser");
+  assert.strictEqual(AR.craft("missing").id, "aurora");
+});
 
 if (failed) {
   console.error("\n" + failed + " failed");

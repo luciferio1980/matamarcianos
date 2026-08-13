@@ -6,6 +6,7 @@ AR.UI = {
   video: ["PANTALLA COMPLETA", "TEMBLOR", "BLOOM", "DESTELLOS", "VOLVER"],
   diffs: ["novice", "arcade", "veteran", "inferno"],
   idx: 0,
+  craftI: 0,
   sub: 0,
   toast: "",
   toastT: 0,
@@ -118,6 +119,73 @@ AR.UI = {
     ctx.fillText(blurb, 960, 820);
   },
 
+  hangar: function (ctx, t) {
+    this.panel(ctx, t);
+    this.header(ctx, "HANGAR");
+    var i = this.craftI || 0;
+    var c = AR.CRAFTS[i];
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#6ab";
+    ctx.font = "18px sans-serif";
+    ctx.fillText("◄  A / D  o  flechas  ►", 960, 210);
+
+    var dummy = {
+      x: 960, y: 430, vy: 0, roll: Math.sin(t * 1.7) * 0.42,
+      art: c.art, craftId: c.id, shield: 0, focus: 0, hurtBlink: false, drawScale: 2.35
+    };
+    AR.Gfx.drawPlayer(ctx, dummy, t);
+
+    ctx.fillStyle = c.accent;
+    ctx.font = "bold 44px sans-serif";
+    ctx.fillText(c.name, 960, 600);
+    ctx.fillStyle = "#cfe";
+    ctx.font = "20px sans-serif";
+    ctx.fillText(c.sub + "  ·  ARMA: " + AR.WEAPON_NAME[c.weapon], 960, 638);
+    ctx.fillStyle = "#8ab";
+    ctx.font = "18px sans-serif";
+    ctx.fillText(c.blurb, 960, 676);
+
+    function bar(label, v, x, y, col) {
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#8ab";
+      ctx.font = "14px sans-serif";
+      ctx.fillText(label, x, y);
+      ctx.fillStyle = "#123";
+      ctx.fillRect(x + 110, y - 12, 160, 10);
+      ctx.fillStyle = col;
+      ctx.fillRect(x + 110, y - 12, 160 * AR.clamp(v, 0, 1), 10);
+    }
+    bar("VELOCIDAD", (c.speed - 0.55) / 0.8, 520, 730, "#3cf0ff");
+    bar("BLINDAJE", c.hp / 6, 980, 730, "#ff5a6a");
+    bar("POTENCIA", (c.dmg - 0.8) / 0.55, 520, 768, "#ffe14a");
+    bar("BOMBAS", c.bombs / 3, 980, 768, "#fa6");
+
+    var slotW = 220, gap = 28;
+    var total = AR.CRAFTS.length * slotW + (AR.CRAFTS.length - 1) * gap;
+    var x0 = (AR.W - total) / 2;
+    for (var s = 0; s < AR.CRAFTS.length; s++) {
+      var sc = AR.CRAFTS[s];
+      var x = x0 + s * (slotW + gap);
+      var sel = s === i;
+      ctx.strokeStyle = sel ? sc.accent : "rgba(80,120,140,0.45)";
+      ctx.lineWidth = sel ? 3 : 1;
+      ctx.fillStyle = sel ? "rgba(8,16,28,0.9)" : "rgba(4,8,14,0.55)";
+      ctx.fillRect(x, 820, slotW, 88);
+      ctx.strokeRect(x, 820, slotW, 88);
+      ctx.textAlign = "center";
+      ctx.fillStyle = sel ? sc.accent : "#6a8a9a";
+      ctx.font = sel ? "bold 18px sans-serif" : "16px sans-serif";
+      ctx.fillText(sc.name, x + slotW / 2, 856);
+      ctx.font = "13px sans-serif";
+      ctx.fillStyle = "#9ab";
+      ctx.fillText(AR.WEAPON_NAME[sc.weapon], x + slotW / 2, 882);
+    }
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(180,240,255," + (0.45 + Math.sin(t * 3) * 0.35) + ")";
+    ctx.font = "18px sans-serif";
+    ctx.fillText("ESPACIO / START  —  DESPEGAR     ESC  —  VOLVER", 960, 1040);
+  },
+
   options: function (ctx) {
     this.panel(ctx);
     this.header(ctx, "OPCIONES");
@@ -195,7 +263,7 @@ AR.UI = {
       "Diseño, código, audio procedural y dirección — Aether Line Studio",
       "Identidad visual generada para este título. Ningún elemento de R-Type u otros clásicos.",
       "",
-      "Nave protagonista: Aurora-IX  ·  Enemigo: Dominio Helixar",
+      "Naves: Aurora-IX · Sable-V · Halcón-3 · Lanza-M  ·  Enemigo: Dominio Helixar",
       "Pantallas: Frontera de Acero · Océano de Titanio · Planeta Rojo",
       "Ciudad Neón · Mundo Biomecánico · El Núcleo",
       "",
@@ -287,7 +355,7 @@ AR.UI = {
     ctx.fillStyle = "#ffe14a";
     ctx.fillText("x" + g.combat.player.mul.toFixed(1), 280, 32);
     ctx.fillStyle = "#cfe";
-    ctx.fillText(AR.WEAPON_NAME[p.weapon] + "  POW " + p.power, 380, 32);
+    ctx.fillText(AR.craft(p.craftId).name + "  ·  " + AR.WEAPON_NAME[p.weapon] + "  POW " + p.power, 380, 32);
     ctx.textAlign = "right";
     ctx.fillStyle = "#9ff";
     ctx.fillText("PANTALLA " + (g.stage + 1) + "  " + AR.STAGES[g.stage].name, AR.W - 24, 32);

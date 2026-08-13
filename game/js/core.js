@@ -26,6 +26,50 @@ AR.STAGES = [
 AR.WEAPONS = ["vulcan", "laser", "spread", "missile"];
 AR.WEAPON_NAME = { vulcan: "VULCANO", laser: "LÁSER", spread: "DISPERSIÓN", missile: "MISILES" };
 
+AR.CRAFTS = [
+  {
+    id: "aurora", name: "AURORA-IX", sub: "Caza de superioridad",
+    weapon: "vulcan", art: "player",
+    hp: 5, speed: 1, dmg: 1, rate: 1, bombs: 2, lives: 3,
+    accent: "#3cf0ff", trail: "rgba(80,230,255,0.95)",
+    blurb: "Ametralladora frontal de cadencia alta. Equilibrada en velocidad, vida y fuego."
+  },
+  {
+    id: "sable", name: "SABLE-V", sub: "Interdictor de rayo",
+    weapon: "laser", art: "sable",
+    hp: 4, speed: 0.86, dmg: 1.22, rate: 1, bombs: 2, lives: 3,
+    accent: "#ff4ad2", trail: "rgba(255,90,210,0.95)",
+    blurb: "Rayo perforante continuo. Menos blindaje, más daño sostenido contra jefes."
+  },
+  {
+    id: "halcon", name: "HALCÓN-3", sub: "Caza de choque",
+    weapon: "spread", art: "halcon",
+    hp: 4, speed: 1.22, dmg: 0.95, rate: 1.08, bombs: 3, lives: 3,
+    accent: "#ffe14a", trail: "rgba(255,190,70,0.95)",
+    blurb: "Abanico de disparos. La más ágil: limpia enjambres y huye de patrones densos."
+  },
+  {
+    id: "lanza", name: "LANZA-M", sub: "Plataforma de misiles",
+    weapon: "missile", art: "lanza",
+    hp: 6, speed: 0.78, dmg: 1.18, rate: 0.92, bombs: 2, lives: 3,
+    accent: "#7cff6a", trail: "rgba(90,255,130,0.95)",
+    blurb: "Misiles teledirigidos. Más dura y lenta; controla el campo sin apuntar cada blanco."
+  }
+];
+AR.craft = function (id) {
+  var i, c;
+  for (i = 0; i < AR.CRAFTS.length; i++) {
+    c = AR.CRAFTS[i];
+    if (c.id === id) return c;
+  }
+  return AR.CRAFTS[0];
+};
+AR.craftIndex = function (id) {
+  var i;
+  for (i = 0; i < AR.CRAFTS.length; i++) if (AR.CRAFTS[i].id === id) return i;
+  return 0;
+};
+
 AR.DEFAULT_KEYS = {
   up: "KeyW", down: "KeyS", left: "KeyA", right: "KeyD",
   up2: "ArrowUp", down2: "ArrowDown", left2: "ArrowLeft", right2: "ArrowRight",
@@ -94,7 +138,8 @@ AR.Save = {
         master: 0.85, music: 0.72, sfx: 0.9,
         fullscreen: true, shake: true, bloom: true, flash: true,
         keys: Object.assign({}, AR.DEFAULT_KEYS),
-        pad: Object.assign({}, AR.DEFAULT_PAD)
+        pad: Object.assign({}, AR.DEFAULT_PAD),
+        craft: "aurora"
       },
       progress: {
         unlockedStage: 0,

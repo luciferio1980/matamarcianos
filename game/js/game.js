@@ -93,6 +93,7 @@ AR.Game = {
     AR.Save.data.stats.runs++;
     AR.Save.write();
     AR.Combat.player = AR.Combat._player();
+    AR.Combat.applyCraft(AR.craft(this.craftPick || AR.Save.data.options.craft || "aurora"));
     this.startStage();
   },
 
@@ -173,6 +174,7 @@ AR.Game = {
     }
     if (st === "menu") this.updMenu();
     else if (st === "difficulty") this.updDiff();
+    else if (st === "hangar") this.updHangar();
     else if (st === "options") this.updOptions();
     else if (st === "audio") this.updAudio();
     else if (st === "video") this.updVideo();
@@ -220,6 +222,38 @@ AR.Game = {
       this._continue = false;
       this.diffPick = id;
       this.startPick = start;
+      AR.UI.craftI = AR.craftIndex(AR.Save.data.options.craft || "aurora");
+      this.setState("hangar");
+    }
+  },
+  updHangar: function () {
+    var n = AR.CRAFTS.length;
+    var x = 0;
+    if (AR.Input.pressed.ArrowLeft || AR.Input.pressed.KeyA) x = -1;
+    if (AR.Input.pressed.ArrowRight || AR.Input.pressed.KeyD) x = 1;
+    var gp = AR.Input.pad();
+    if (gp) {
+      var lf = gp.buttons[14] && gp.buttons[14].pressed;
+      var rt = gp.buttons[15] && gp.buttons[15].pressed;
+      if (lf && !AR.Input.padPrev.menuLeft) x = -1;
+      if (rt && !AR.Input.padPrev.menuRight) x = 1;
+      AR.Input.padPrev.menuLeft = !!lf;
+      AR.Input.padPrev.menuRight = !!rt;
+    }
+    if (x) {
+      AR.UI.craftI = (AR.UI.craftI + x + n) % n;
+      AR.Audio.sfx("menu");
+    }
+    if (AR.Input.btnPressed("pause") || AR.Input.pressed.Escape) {
+      this.setState("difficulty");
+      return;
+    }
+    if (AR.Input.pressed.Enter || AR.Input.pressed.Space || AR.Input.btnPressed("fire") || AR.Input.btnPressed("confirm")) {
+      var c = AR.CRAFTS[AR.UI.craftI] || AR.CRAFTS[0];
+      this.craftPick = c.id;
+      AR.Save.data.options.craft = c.id;
+      AR.Save.write();
+      AR.Audio.sfx("confirm");
       this.introT = 0;
       this.setState("intro");
       AR.Audio.play("title");
@@ -420,6 +454,7 @@ AR.Game = {
       AR.UI.title(ctx, this.t, this);
     } else if (st === "menu") AR.UI.main(ctx, this.t);
     else if (st === "difficulty") AR.UI.difficulty(ctx);
+    else if (st === "hangar") AR.UI.hangar(ctx, this.t);
     else if (st === "options") AR.UI.options(ctx);
     else if (st === "audio") AR.UI.audioMenu(ctx);
     else if (st === "video") AR.UI.videoMenu(ctx);
@@ -507,6 +542,7 @@ AR.boot = function () {
         var diff = q.get("diff") || "arcade";
         var st = parseInt(q.get("stage") || "0", 10);
         if (isNaN(st)) st = 0;
+        AR.Game.craftPick = q.get("craft") || "aurora";
         try { AR.Audio.unlock(); } catch (e2) {}
         AR.Game.newRun(diff, AR.clamp(st, 0, 5));
       }

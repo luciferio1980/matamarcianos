@@ -30,6 +30,9 @@ AR.Gfx = {
       ["titleBg", "assets/title-bg.jpg"],
       ["logo", "assets/logo-aether-raze.jpg"],
       ["player", "assets/spr-player.png", "art"],
+      ["sable", "assets/spr-sable.png", "art"],
+      ["halcon", "assets/spr-halcon.png", "art"],
+      ["lanza", "assets/spr-lanza.png", "art"],
       ["wasp", "assets/spr-wasp.png", "art"],
       ["drone", "assets/spr-drone.png", "art"],
       ["kami", "assets/spr-kami.png", "art"],
@@ -110,6 +113,9 @@ AR.Gfx = {
   },
   _buildSprites: function () {
     this.sprites.player = this._ship(96, 48, "#3cf0ff", "#7dffd4", "#0a2a44", false);
+    this.sprites.sable = this._ship(104, 40, "#ff4ad2", "#ffa0e8", "#2a1024", false);
+    this.sprites.halcon = this._ship(92, 52, "#ffe14a", "#ffb060", "#2a1c08", false);
+    this.sprites.lanza = this._ship(110, 50, "#7cff6a", "#c8ff9a", "#102410", false);
     this.sprites.wasp = this._ship(56, 28, "#ff5a6a", "#ffb070", "#3a1018", true);
     this.sprites.drone = this._ship(48, 36, "#c9d4e8", "#8ab", "#223", true);
     this.sprites.kami = this._ship(50, 22, "#ffcc33", "#ff7722", "#421", true);
@@ -272,23 +278,32 @@ AR.Gfx = {
   },
 
   drawPlayer: function (ctx, p, t) {
+    var craft = AR.craft(p.craftId);
+    var trail = (craft && craft.trail) || "rgba(80,230,255,0.95)";
     var pulse = 0.65 + Math.sin(t * 22) * 0.35;
-    this.glow(ctx, p.x - 36, p.y, 42, "rgba(80,230,255,0.95)", 0.55 * pulse);
-    this.glow(ctx, p.x - 18, p.y, 22, "rgba(180,255,255,0.8)", 0.35 * pulse);
-    var img = this.art.player;
-    var dw = 128, dh = this._imgOk(img) ? dw * img.naturalHeight / img.naturalWidth : 44;
+    var sc = p.drawScale || 1;
+    var roll = p.roll || 0;
+    this.glow(ctx, p.x - 36 * sc, p.y, 42 * sc, trail, 0.55 * pulse);
+    this.glow(ctx, p.x - 18 * sc, p.y, 22 * sc, trail, 0.35 * pulse);
+    var img = this.art[p.art || "player"] || this.art.player;
+    var dw = 128 * sc;
+    var dh = this._imgOk(img) ? dw * img.naturalHeight / img.naturalWidth : 44 * sc;
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(p.vy * 0.00055);
+    /* Bank/roll around the fuselage: climb = left, dive = right. No nose pitch. */
+    ctx.transform(1, 0, roll * 0.48, Math.max(0.58, Math.cos(roll)), 0, 0);
     if (p.hurtBlink) ctx.globalAlpha = 0.35 + 0.65 * ((t * 20) % 1 > 0.5 ? 1 : 0);
     if (this._imgOk(img)) ctx.drawImage(img, -dw * 0.42, -dh * 0.5, dw, dh);
-    else ctx.drawImage(this.sprites.player, -48, -24);
-    ctx.fillStyle = "rgba(160,255,255," + (0.35 + pulse * 0.5) + ")";
+    else {
+      var fb = this.sprites[p.art || "player"] || this.sprites.player;
+      ctx.drawImage(fb, -48 * sc, -24 * sc, fb.width * sc, fb.height * sc);
+    }
+    ctx.fillStyle = trail.replace("0.95", String(0.35 + pulse * 0.5));
     ctx.globalCompositeOperation = "lighter";
     ctx.beginPath();
-    ctx.moveTo(-48, -7);
-    ctx.lineTo(-78 - pulse * 22, 0);
-    ctx.lineTo(-48, 7);
+    ctx.moveTo(-48 * sc, -7 * sc);
+    ctx.lineTo((-78 - pulse * 22) * sc, 0);
+    ctx.lineTo(-48 * sc, 7 * sc);
     ctx.fill();
     ctx.globalCompositeOperation = "source-over";
     if (p.shield > 0) {
