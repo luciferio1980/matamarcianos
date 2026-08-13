@@ -17,7 +17,7 @@ AR.Boss = function (id, g) {
   this.fire = 0;
   this.pat = 0;
   this.patT = 0;
-  var hp = [520, 640, 780, 860, 980, 1400][id] * g.diff.hp;
+  var hp = [780, 960, 1180, 1320, 1500, 2100][id] * g.diff.hp;
   this.hp = this.max = hp;
   this.name = AR.STAGES[id].boss;
   this.title = AR.STAGES[id].bossTitle;
@@ -29,7 +29,7 @@ AR.Boss.prototype._setupParts = function (id) {
   this.wreck = [];
   function part(name, ox, oy, r, hp, score, kind) {
     self.parts.push({
-      name: name, ox: ox, oy: oy, r: r, hp: hp, max: hp, alive: true,
+      name: name, ox: ox, oy: oy, r: r, hp: Math.round(hp * 1.55), max: Math.round(hp * 1.55), alive: true,
       score: score || 1500, flash: 0, kind: kind || "armor"
     });
   }
@@ -116,6 +116,7 @@ AR.Boss.prototype.py = function (p) { return this.y + p.oy; };
 
 AR.Boss.prototype.hurt = function (dmg, x, y) {
   if (this.intro > 0 || this.dying) return;
+  dmg *= 0.38;
   var hitPart = null, best = 90;
   for (var i = 0; i < this.parts.length; i++) {
     var p = this.parts[i];
@@ -164,7 +165,7 @@ AR.Boss.prototype.hitBullet = function (b) {
 
 AR.Boss.prototype.laserHit = function (x, y0, y1, dmg) {
   if (this.intro > 0 || this.dying) return;
-  if (this.x > x && this.y > y0 - 40 && this.y < y1 + 40) this.hurt(dmg, this.x - 40, this.y);
+  if (this.x > x && this.y > y0 - 40 && this.y < y1 + 40) this.hurt(dmg * 0.45, this.x - 40, this.y);
 };
 
 AR.Boss.prototype.bodyR = function () {
